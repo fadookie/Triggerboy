@@ -66,7 +66,7 @@ boolean checkLSDJStopped()
     if(sequencerStarted) {
       readgbClockLine=false;
       countClockPause = 0;                           //reset our clock
-      Serial.write(0xFC);                      //send the transport stop message
+      if (!usbMode) Serial.write(0xFC);                      //send the transport stop message
       sequencerStop();                               //call the global sequencer stop function
     }
     return true;
@@ -84,14 +84,22 @@ void sendMidiClockSlaveFromLSDJ()
 {
   if(!countGbClockTicks) {      //If we hit 8 bits
     if(!sequencerStarted) {         //If the sequencer hasnt started
-      Serial.write((0x90+memory[MEM_LSDJMASTER_MIDI_CH])); //Send the midi channel byte
-      Serial.write(readGbSerialIn);                //Send the row value as a note
-      Serial.write(0x7F);                          //Send a velocity 127
-      
-      Serial.write(0xFA);     //send MIDI transport start message 
+      if (!usbMode) {
+        Serial.write((0x90+memory[MEM_LSDJMASTER_MIDI_CH])); //Send the midi channel byte
+        Serial.write(readGbSerialIn);                //Send the row value as a note
+        Serial.write(0x7F);                          //Send a velocity 127
+        
+        Serial.write(0xFA);     //send MIDI transport start message 
+      }
       sequencerStart();             //call the global sequencer start function
     }
-    Serial.write(0xF8);       //Send the MIDI Clock Tick
+    if (usbMode) {
+      Serial.print("[");
+      Serial.print(millis());
+      Serial.println("ms] Tick");
+    } else {
+      Serial.write(0xF8);       //Send the MIDI Clock Tick
+    }
     
     countGbClockTicks=0;            //Reset the bit counter
     readGbSerialIn = 0x00;                //Reset our serial read value

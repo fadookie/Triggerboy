@@ -5,7 +5,12 @@
    changing too fast.
  */
 void showSelectedMode()
-{
+{ 
+  if (usbMode) {
+    Serial.print("Switching to mode ");
+    Serial.println(memory[MEM_MODE]);
+  }
+  
   digitalWrite(pinStatusLed,LOW);
   
   for(int m=0;m<3;m++) {
@@ -43,6 +48,8 @@ void showSelectedMode()
   }
   lastMode = memory[MEM_MODE];
   delay(300);
+  
+  //if (usbMode) Serial.println("Switching to mode " + memory[MEM_MODE]);
 }
 
 void updateVisualSync()

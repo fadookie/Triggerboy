@@ -113,7 +113,7 @@
 boolean alwaysUseDefaultSettings = false; //set to true to always use the settings below, else they are pulled from memory for the software editor
 
 
-boolean usbMode                  = false; //to use usb for serial communication as oppose to MIDI - sets baud rate to 38400
+boolean usbMode                  = true; //to use usb for serial communication as oppose to MIDI - sets baud rate to 38400
 
 
 byte defaultMemoryMap[MEM_MAX] = {
@@ -367,6 +367,11 @@ void setup() {
 */
   if(!memory[MEM_FORCE_MODE]) memory[MEM_MODE] = EEPROM.read(MEM_MODE);
   lastMode = memory[MEM_MODE];
+  
+  if (usbMode) {
+    Serial.println("Hello arduinoboy! Memory dump:");
+    printMemory();
+  }
   
   startupSequence();
   
