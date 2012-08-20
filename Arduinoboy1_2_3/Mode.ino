@@ -47,6 +47,13 @@ void switchMode()
   switch(memory[MEM_MODE])
   {
     case 0:
+      modeLSDJMasterSyncSetup();
+      break;
+    case 1:
+      modeLSDJMidioutSetup();
+      break;
+    /*
+    case 0:
       modeLSDJSlaveSyncSetup();
       break;
     case 1:
@@ -67,6 +74,7 @@ void switchMode()
     case 6:
       modeLSDJMidioutSetup();
       break;
+      */
   }
 }
 

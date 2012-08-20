@@ -32,14 +32,26 @@ void modeLSDJMidiout()
           switch(incomingMidiByte)
           {
            case 0x7F: //clock tick
-             Serial.write(0xF8);
+             if (usbMode) {
+               logLine("Tick");
+             } else {
+               Serial.write(0xF8);
+             }
              break;
            case 0x7E: //seq stop
-             Serial.write(0xFC);
+             if (usbMode) {
+               logLine("Seq stop");
+             } else {
+               Serial.write(0xFC);
+             }
              stopAllNotes();
              break;
            case 0x7D: //seq start
-             Serial.write(0xFA);
+             if (usbMode) {
+               logLine("Seq start");
+             } else {
+               Serial.write(0xFA);
+             }
              break;
            default:
              midiData[0] = (incomingMidiByte - 0x70);
@@ -66,6 +78,7 @@ void midioutDoAction(byte m, byte v)
 {
   if(m < 4) {
     //note message
+    logLine("Note message");
     if(v) {
       checkStopNote(m);
       playNote(m,v);
@@ -75,9 +88,11 @@ void midioutDoAction(byte m, byte v)
   } else if (m < 8) {
     m-=4;
     //cc message
+    logLine("CC message");
     playCC(m,v);
   } else if(m < 0x0C) {
     m-=8;
+    logLine("PC message");
     playPC(m,v);
   }
   blinkLight(0x90+m,v);
@@ -96,7 +111,11 @@ void stopNote(byte m)
     midiData[0] = (0x80 + (memory[MEM_MIDIOUT_NOTE_CH+m]));
     midiData[1] = midioutNoteHold[m][x];
     midiData[2] = 0x00;
-    Serial.write(midiData,3);
+    if (usbMode) {
+      logLine("stopNote");
+    } else {
+      Serial.write(midiData,3);
+    }
   }
   midiOutLastNote[m] = -1;
   midioutNoteHoldCounter[m] = 0;
@@ -107,7 +126,11 @@ void playNote(byte m, byte n)
   midiData[0] = (0x90 + (memory[MEM_MIDIOUT_NOTE_CH+m]));
   midiData[1] = n;
   midiData[2] = 0x7F;
-  Serial.write(midiData,3);
+  if (usbMode) {
+    logLine("playNote");
+  } else {
+    Serial.write(midiData,3);
+  }
   
   midioutNoteHold[m][midioutNoteHoldCounter[m]] =n;
   midioutNoteHoldCounter[m]++;
@@ -128,7 +151,11 @@ void playCC(byte m, byte n)
     midiData[0] = (0xB0 + (memory[MEM_MIDIOUT_CC_CH+m]));
     midiData[1] = (memory[MEM_MIDIOUT_CC_NUMBERS+n]);
     midiData[2] = v;
-    Serial.write(midiData,3);
+    if (usbMode) {
+      logLine("playCC A");
+    } else {
+      Serial.write(midiData,3);
+    }
   } else {
     if(memory[MEM_MIDIOUT_CC_SCALING+m]) {
       float s;
@@ -139,7 +166,11 @@ void playCC(byte m, byte n)
     midiData[0] = (0xB0 + (memory[MEM_MIDIOUT_CC_CH+m]));
     midiData[1] = (memory[MEM_MIDIOUT_CC_NUMBERS+n]);
     midiData[2] = v;
-    Serial.write(midiData,3);
+    if (usbMode) {
+      logLine("playCC B");
+    } else {
+      Serial.write(midiData,3);
+    }
   }
 }
 
@@ -147,7 +178,11 @@ void playPC(byte m, byte n)
 {
   midiData[0] = (0xC0 + (memory[MEM_MIDIOUT_NOTE_CH+m]));
   midiData[1] = n;
-  Serial.write(midiData,2);
+  if (usbMode) {
+    logLine("playPC");
+  } else {
+    Serial.write(midiData,2);
+  }
 }                                                                    
 
 void stopAllNotes()
@@ -159,7 +194,11 @@ void stopAllNotes()
     midiData[0] = (0xB0 + (memory[MEM_MIDIOUT_NOTE_CH+m]));
     midiData[1] = 123;
     midiData[2] = 0x7F;
-    Serial.write(midiData,3); //Send midi
+    if (usbMode) {
+      logLine("stopAllNotes");
+    } else {
+      Serial.write(midiData,3); //Send midi
+    }
   }
 }
 

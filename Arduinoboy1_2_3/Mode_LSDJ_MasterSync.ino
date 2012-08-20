@@ -94,9 +94,7 @@ void sendMidiClockSlaveFromLSDJ()
       sequencerStart();             //call the global sequencer start function
     }
     if (usbMode) {
-      Serial.print("[");
-      Serial.print(millis());
-      Serial.println("ms] Tick");
+      logLine("Tick");
     } else {
       Serial.write(0xF8);       //Send the MIDI Clock Tick
     }

@@ -75,7 +75,7 @@
  ***************************************************************************/
 #include <EEPROM.h>
 #define MEM_MAX 65
-#define NUMBER_OF_MODES 7    //Right now there are 7 modes, Might be more in the future
+#define NUMBER_OF_MODES 2    //Right now there are 7 modes, Might be more in the future
 
 //!!! do not edit these, they are the position in EEPROM memory that contain the value of each stored setting
 #define MEM_CHECK 0
@@ -110,7 +110,7 @@
 * User Settings
 ***************************************************************************/
 
-boolean alwaysUseDefaultSettings = false; //set to true to always use the settings below, else they are pulled from memory for the software editor
+boolean alwaysUseDefaultSettings = true; //set to true to always use the settings below, else they are pulled from memory for the software editor
 
 
 boolean usbMode                  = true; //to use usb for serial communication as oppose to MIDI - sets baud rate to 38400
@@ -384,4 +384,11 @@ void setup() {
 void loop () {
   setMode();
   switchMode();
+}
+
+void logLine(const char * s) {
+  Serial.print("[");
+  Serial.print(millis());
+  Serial.print("ms] ");
+  Serial.println(s);
 }
