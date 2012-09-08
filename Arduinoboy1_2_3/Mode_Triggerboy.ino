@@ -18,7 +18,7 @@ char im[DATA_SIZE];
 char data[DATA_SIZE];
 #define AUDIO_IN_LEFT_PIN A3
 //#define PRINT_FFT
-#define PRINT_TRIGGERS
+//#define PRINT_TRIGGERS
 //#define PRINT_AMPLITUDE_THRESH
 
 #define NUM_TRIGGERS 2
@@ -26,7 +26,7 @@ char data[DATA_SIZE];
 #define AMPLITUDE_TRIGGER 1
 #define LOW_BAND_TRIGGER 2
 
-#define AMPLITUDE_THRESH 600
+#define AMPLITUDE_THRESH 700
 
 byte triggerMap[NUM_TRIGGERS]; //Assignment of absolute triggers (index) to digital out port number (value)
 boolean triggerStates[NUM_TRIGGERS]; //The current on/off state of each trigger
