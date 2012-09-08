@@ -52,6 +52,9 @@ void switchMode()
     case 1:
       modeLSDJMidioutSetup();
       break;
+    case 2:
+      modeTriggerboySetup();
+      break;
     /*
     case 0:
       modeLSDJSlaveSyncSetup();
