@@ -42,8 +42,8 @@ void modeTriggerboySetup()
   
   //Set up trigger map.
   //triggerMap[0] = 13 means trigger 0 is assigned to pin 13, etc.
-  triggerMap[TICK_TRIGGER]        = 13; //LSDJ Master Clock Ticks.
-  triggerMap[AMPLITUDE_TRIGGER]    = 12; //Trigger when audio amplitude is over a certain threshhold
+  triggerMap[TICK_TRIGGER]        = 4; //LSDJ Master Clock Ticks.
+  triggerMap[AMPLITUDE_TRIGGER]    = 6; //Trigger when audio amplitude is over a certain threshhold
   
   //Configure all mapped outputs
   for (int currentTrigger = 0; currentTrigger < NUM_TRIGGERS; currentTrigger++) {
@@ -201,6 +201,7 @@ boolean didUpdate(byte trigger, boolean state) {
   //Does this trigger need an update? If so, update it and return true. Otherwise, return false.
   if (state != triggerStates[trigger]) {
     triggerStates[trigger] = state;
+    digitalWrite(triggerMap[trigger], state ? HIGH : LOW);
     return true;
   } else {
     return false;
