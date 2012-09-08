@@ -10,6 +10,22 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
+#include <fix_fft.h>
+
+//FFT stuff
+#define DATA_SIZE 128
+char im[DATA_SIZE];
+char data[DATA_SIZE];
+#define PIN_ADC A3
+//#define PRINT_FFT
+
+#define NUM_TRIGGERS 2
+#define TICK_TRIGGER 0
+#define LOW_BAND_TRIGGER 1
+
+byte triggerMap[NUM_TRIGGERS]; //Assignment of absolute triggers (index) to digital out port number (value)
+boolean triggerStates[NUM_TRIGGERS]; //The current on/off state of each trigger
+boolean pendingTriggerStates[NUM_TRIGGERS]; //Pending changes to on/off state of each trigger on the next update
 
 void modeTriggerboySetup()
 {
@@ -19,6 +35,16 @@ void modeTriggerboySetup()
   countSyncTime=0;
   blinkMaxCount=1000;
   
+  //Set up trigger map.
+  //triggerMap[0] = 13 means trigger 0 is assigned to pin 13, etc.
+  triggerMap[TICK_TRIGGER]        = 13; //LSDJ Master Clock Ticks.
+  triggerMap[LOW_BAND_TRIGGER]    = 12; //Trigger when low band audio is over a certain volume threshhold
+  
+  //Configure all mapped outputs
+  for (int currentTrigger = 0; currentTrigger < NUM_TRIGGERS; currentTrigger++) {
+    byte currentPin = triggerMap[currentTrigger];
+    pinMode(currentPin, OUTPUT);
+  }
   
   modeTriggerboy();
 }
@@ -26,6 +52,7 @@ void modeTriggerboySetup()
 void modeTriggerboy()
 {
   while(1){
+    //Process LSDJ Master Sync
     if (Serial.available()) {                  //If serial data was send to midi input
       incomingMidiByte = Serial.read();            //Read it
       if(!checkForProgrammerSysex(incomingMidiByte) && !usbMode) Serial.write(incomingMidiByte);        //Send it to the midi output
@@ -35,7 +62,7 @@ void modeTriggerboy()
       while(readgbClockLine) {                     //Loop untill its off
         readgbClockLine = PINC & 0x01;            //Read the clock again
         bit = (PINC & 0x04)>>2;                   //Read the serial input for song position
-        tb_checkActions();
+        tb_checkActions(); //Do stuff that should happen on every loop
       }
       
       countClockPause= 0;                          //Reset our wait timer for detecting a sequencer stop
@@ -46,15 +73,108 @@ void modeTriggerboy()
       tb_sendMidiClockSlaveFromLSDJ();                //send the clock & start offset data to midi
       
     }
+    
     setMode();
   }
 }
 
+void fft_forward() {
+  //Process the FFT for this loop
+  int static i = 0;
+  static long tt;
+  int val;
+  
+   if (millis() > tt){
+	if (i < DATA_SIZE){
+	  val = analogRead(PIN_ADC);
+	  data[i] = val / 4 - DATA_SIZE;
+	  im[i] = 0;
+	  i++;  
+	  
+	}
+	else{
+	  //this could be done with the fix_fftr function without the im array.
+	  fix_fft(data,im,7,0);
+	  // I am only interessted in the absolute value of the transformation
+	  for (i=0; i< 64;i++){
+	     data[i] = sqrt(data[i] * data[i] + im[i] * im[i]);
+	  }
+	  
+	  //do something with the data values 1..64 and ignore im
+#ifdef PRINT_FFT
+	  print_fft(data);
+#endif
+	}
+    
+    tt = millis();
+   }
+}
+
+void print_fft(char * data) {
+  //Print FFT to serial for debugging
+  //for (int i = 0; i < sizeof(data) / sizeof(char); i++) {
+  for (int i = 0; i < 64; i++) {
+    Serial.print(data[i], DEC);
+    Serial.print(" ");
+    //Serial.println(i);
+  }
+  Serial.println("");
+}
+
 void tb_checkActions()
 {
+  fft_forward();         //run the FFT
   tb_checkLSDJStopped();                        //Check if LSDJ hit Stop
   setMode();
   updateStatusLight();
+  triggerShit();
+}
+
+void triggerShit() {
+  //Trigger some outputs!
+  
+  //Set trigger states
+  boolean stateChanged = false;
+  for (int currentTrigger = 0; currentTrigger < NUM_TRIGGERS; currentTrigger++) {
+    byte currentPin = triggerMap[currentTrigger];
+    switch(currentTrigger) {
+      case TICK_TRIGGER:
+        if (pendingTriggerStates[currentTrigger]) {
+          pendingTriggerStates[currentTrigger] = false;
+          if (didUpdate(currentTrigger, true)) stateChanged = true; //Update the current trigger state if needed
+        } else {
+          if (didUpdate(currentTrigger, false)) stateChanged = true;
+        }
+        break;
+      default:
+        //Just use the pending value, don't modify it in case this is a continuous trigger
+        if (didUpdate(currentTrigger, pendingTriggerStates[currentTrigger])) stateChanged = true;
+        break;
+    }
+  }
+  
+  //Virtual triggering for debugging purposes:
+  if (stateChanged) {
+    logTimestamp();
+    for (int currentTrigger = 0; currentTrigger < NUM_TRIGGERS; currentTrigger++) {
+      byte currentPin = triggerMap[currentTrigger];
+      boolean currentState = triggerStates[currentTrigger];
+      Serial.print(currentPin);
+      Serial.print(currentState ? "[*] " : "[ ] ");
+    }
+    Serial.println("");
+  }
+
+}
+
+boolean didUpdate(byte trigger, boolean state) {
+  //Does this trigger need an update? If so, update it and return true. Otherwise, return false.
+  if (state != triggerStates[trigger]) {
+    triggerStates[trigger] = state;
+    return true;
+  } else {
+    return false;
+  }
 }
 
  /*
@@ -96,7 +216,8 @@ void tb_sendMidiClockSlaveFromLSDJ()
       sequencerStart();             //call the global sequencer start function
     }
     if (usbMode) {
-      logLine("Tick");
+      //logLine("Triggerboy: Tick");
+      pendingTriggerStates[TICK_TRIGGER] = true;
     } else {
       Serial.write(0xF8);       //Send the MIDI Clock Tick
     }

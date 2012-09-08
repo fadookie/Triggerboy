@@ -386,9 +386,13 @@ void loop () {
   switchMode();
 }
 
-void logLine(const char * s) {
+void logTimestamp() {
   Serial.print("[");
   Serial.print(millis());
   Serial.print("ms] ");
+}
+
+void logLine(const char * s) {
+  logTimestamp();
   Serial.println(s);
 }
