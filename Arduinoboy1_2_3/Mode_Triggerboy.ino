@@ -16,12 +16,17 @@
 #define DATA_SIZE 128
 char im[DATA_SIZE];
 char data[DATA_SIZE];
-#define PIN_ADC A3
+#define AUDIO_IN_LEFT_PIN A3
 //#define PRINT_FFT
+#define PRINT_TRIGGERS
+//#define PRINT_AMPLITUDE_THRESH
 
 #define NUM_TRIGGERS 2
 #define TICK_TRIGGER 0
-#define LOW_BAND_TRIGGER 1
+#define AMPLITUDE_TRIGGER 1
+#define LOW_BAND_TRIGGER 2
+
+#define AMPLITUDE_THRESH 600
 
 byte triggerMap[NUM_TRIGGERS]; //Assignment of absolute triggers (index) to digital out port number (value)
 boolean triggerStates[NUM_TRIGGERS]; //The current on/off state of each trigger
@@ -38,7 +43,7 @@ void modeTriggerboySetup()
   //Set up trigger map.
   //triggerMap[0] = 13 means trigger 0 is assigned to pin 13, etc.
   triggerMap[TICK_TRIGGER]        = 13; //LSDJ Master Clock Ticks.
-  triggerMap[LOW_BAND_TRIGGER]    = 12; //Trigger when low band audio is over a certain volume threshhold
+  triggerMap[AMPLITUDE_TRIGGER]    = 12; //Trigger when audio amplitude is over a certain threshhold
   
   //Configure all mapped outputs
   for (int currentTrigger = 0; currentTrigger < NUM_TRIGGERS; currentTrigger++) {
@@ -62,7 +67,8 @@ void modeTriggerboy()
       while(readgbClockLine) {                     //Loop untill its off
         readgbClockLine = PINC & 0x01;            //Read the clock again
         bit = (PINC & 0x04)>>2;                   //Read the serial input for song position
-        tb_checkActions(); //Do stuff that should happen on every loop
+        tb_checkActions();
+        alwaysRunActions(); //Do stuff that should happen on every loop
       }
       
       countClockPause= 0;                          //Reset our wait timer for detecting a sequencer stop
@@ -72,6 +78,9 @@ void modeTriggerboy()
 
       tb_sendMidiClockSlaveFromLSDJ();                //send the clock & start offset data to midi
       
+    } else {
+      //Still do stuff if we are waiting for the GB clock, i.e. if it's disconnected
+      alwaysRunActions();
     }
     
     setMode();
@@ -86,7 +95,7 @@ void fft_forward() {
   
    if (millis() > tt){
 	if (i < DATA_SIZE){
-	  val = analogRead(PIN_ADC);
+	  val = analogRead(AUDIO_IN_LEFT_PIN);
 	  data[i] = val / 4 - DATA_SIZE;
 	  im[i] = 0;
 	  i++;  
@@ -121,13 +130,17 @@ void print_fft(char * data) {
   Serial.println("");
 }
 
+void alwaysRunActions() {
+  //Run these every single loop
+  fft_forward();         //run the FFT
+  triggerShit();
+}
+
 void tb_checkActions()
 {
-  fft_forward();         //run the FFT
   tb_checkLSDJStopped();                        //Check if LSDJ hit Stop
   setMode();
   updateStatusLight();
-  triggerShit();
 }
 
 void triggerShit() {
@@ -146,6 +159,21 @@ void triggerShit() {
           if (didUpdate(currentTrigger, false)) stateChanged = true;
         }
         break;
+      case AMPLITUDE_TRIGGER:
+      {
+        int amp = analogRead(AUDIO_IN_LEFT_PIN);
+        if (amp > AMPLITUDE_THRESH) {
+#ifdef PRINT_AMPLITUDE_THRESH
+          logTimestamp();
+          Serial.print("AMPLITUDE = ");
+          Serial.println(amp);
+#endif
+          if (didUpdate(currentTrigger, true)) stateChanged = true;
+        } else {
+          if (didUpdate(currentTrigger, false)) stateChanged = true;
+        }
+        break;
+      }
       default:
         //Just use the pending value, don't modify it in case this is a continuous trigger
         if (didUpdate(currentTrigger, pendingTriggerStates[currentTrigger])) stateChanged = true;
@@ -153,6 +181,7 @@ void triggerShit() {
     }
   }
   
+#ifdef PRINT_TRIGGERS
   //Virtual triggering for debugging purposes:
   if (stateChanged) {
     logTimestamp();
@@ -164,6 +193,7 @@ void triggerShit() {
     }
     Serial.println("");
   }
+#endif
 
 }
 
