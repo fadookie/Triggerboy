@@ -110,10 +110,10 @@
 * User Settings
 ***************************************************************************/
 
-boolean alwaysUseDefaultSettings = true; //set to true to always use the settings below, else they are pulled from memory for the software editor
+const boolean alwaysUseDefaultSettings = true; //set to true to always use the settings below, else they are pulled from memory for the software editor
 
 
-boolean usbMode                  = true; //to use usb for serial communication as oppose to MIDI - sets baud rate to 38400
+const boolean usbMode                  = true; //to use usb for serial communication as oppose to MIDI - sets baud rate to 38400
 
 //Define to dump EEPROM to serial connection on boot if usbMode is enabled:
 //#define PRINT_MEMORY

@@ -50,6 +50,20 @@ void modeTriggerboySetup()
   //Configure all mapped outputs
   for (int currentTrigger = 0; currentTrigger < NUM_TRIGGERS; currentTrigger++) {
     byte currentPin = triggerMap[currentTrigger];
+    //Sanity check on reserved pins
+    if (
+     (usbMode && (0 == currentPin || 1 == currentPin))
+     || pinButtonMode == currentPin
+    ) {
+      char errorMessage [150];
+      sprintf(
+        errorMessage,
+        "FATAL ERROR: Trigger %i is assigned to pin %i, which is reserved.\nPlease fix your triggerMap config and re-flash the Arduino.",
+        currentTrigger,
+        currentPin
+      );
+      fatalError(errorMessage);
+    }
     pinMode(currentPin, OUTPUT);
   }
   
@@ -121,6 +135,7 @@ void fft_forward() {
    }
 }
 
+#ifdef PRINT_FFT
 void print_fft(char * data) {
   //Print FFT to serial for debugging
   //for (int i = 0; i < sizeof(data) / sizeof(char); i++) {
@@ -131,6 +146,7 @@ void print_fft(char * data) {
   }
   Serial.println("");
 }
+#endif
 
 void alwaysRunActions() {
   //Run these every single loop
@@ -262,4 +278,15 @@ void tb_sendMidiClockSlaveFromLSDJ()
   }
   countGbClockTicks++;              //Increment the bit counter
  if(countGbClockTicks==8) countGbClockTicks=0; 
+}
+
+void fatalError(const char * error) {
+  if (usbMode) {
+    Serial.println(error);
+  }
+  while(1) { //endless loop to stop main program from looping again
+    //Flash an SOS
+    morseBlink("sos ");
+    delay(3000);
+  }
 }
