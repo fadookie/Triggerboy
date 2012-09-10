@@ -17,20 +17,41 @@
 char im[DATA_SIZE];
 char data[DATA_SIZE];
 #define AUDIO_IN_LEFT_PIN A3
+
+//Print debugging settings
+
+//Print FFT every FFT frame:
 //#define PRINT_FFT
+
+//Print pinout state every time it changes:
 //#define PRINT_TRIGGERS
+
+//Print amplitude whenever the sample exceeds the threshold:
 //#define PRINT_AMPLITUDE_THRESH
 
-#define NUM_TRIGGERS 2
-#define TICK_TRIGGER 0
-#define AMPLITUDE_TRIGGER 1
-#define LOW_BAND_TRIGGER 2
+//Trigger config
+const byte NUM_TRIGGERS = 2 + 1; //The +1 is for the null trigger
+
+const byte NULL_TRIGGER = 0; //Triggers that are currently disabled can redirect their status changes to this trigger, so we don't have to disable the hooks for them throughout the code
+
+//The in-use triggers should be continuous numbers from 1 through (NUM_TRIGGERS - 1.)
+//Extras may be assigned to NULL_TRIGGER to effectively disable them.
+const byte TICK_TRIGGER = NULL_TRIGGER;
+const byte TEST_CLOCK_TRIGGER = 1;
+const byte AMPLITUDE_TRIGGER = 2;
+const byte LOW_BAND_TRIGGER = NULL_TRIGGER;
 
 #define AMPLITUDE_THRESH 700
 
+//Trigger data structures
 byte triggerMap[NUM_TRIGGERS]; //Assignment of absolute triggers (index) to digital out port number (value)
 boolean triggerStates[NUM_TRIGGERS]; //The current on/off state of each trigger
 boolean pendingTriggerStates[NUM_TRIGGERS]; //Pending changes to on/off state of each trigger on the next update
+
+//Variables for each trigger:
+
+//TEST_CLOCK_TRIGGER
+const unsigned long msTestClockTickInterval = 1000; //How long to wait between test clock ticks (in milliseconds)
 
 void modeTriggerboySetup()
 {
@@ -42,12 +63,21 @@ void modeTriggerboySetup()
   countSyncTime=0;
   blinkMaxCount=1000;
   
-  //Set up trigger map.
+  //Set up mapping between triggers and pinouts. It's okay for disabled triggers to be here since they will not fire.
   //triggerMap[0] = 13 means trigger 0 is assigned to pin 13, etc.
   triggerMap[TICK_TRIGGER]        = 4; //LSDJ Master Clock Ticks.
-  triggerMap[AMPLITUDE_TRIGGER]    = 6; //Trigger when audio amplitude is over a certain threshhold
+  triggerMap[AMPLITUDE_TRIGGER]   = 6; //Trigger when audio amplitude is over a certain threshhold
+  triggerMap[TEST_CLOCK_TRIGGER]  = 13; //Trigger on an internal timer, for testing outputs independently of the connected inputs
   
-  //Configure all mapped outputs
+  triggerMap[NULL_TRIGGER]        = 255; //A place for currently disabled triggers to dump data. This shouldn't be a real pin and should never be actually written to. Pinout defined after the other ones to overwrite them in case any of them are currently pointing to the null trigger.
+  
+  logTimestamp();
+  Serial.print("There are currently ");
+  Serial.print(NUM_TRIGGERS - 1);
+  Serial.println(" active triggers:");
+  printTriggers();
+  
+  //Configure all mapped pins as outputs
   for (int currentTrigger = 0; currentTrigger < NUM_TRIGGERS; currentTrigger++) {
     byte currentPin = triggerMap[currentTrigger];
     //Sanity check on reserved pins
@@ -168,55 +198,81 @@ void triggerShit() {
   boolean stateChanged = false;
   for (int currentTrigger = 0; currentTrigger < NUM_TRIGGERS; currentTrigger++) {
     byte currentPin = triggerMap[currentTrigger];
-    switch(currentTrigger) {
-      case TICK_TRIGGER:
-        if (pendingTriggerStates[currentTrigger]) {
-          pendingTriggerStates[currentTrigger] = false;
-          if (didUpdate(currentTrigger, true)) stateChanged = true; //Update the current trigger state if needed
-        } else {
-          if (didUpdate(currentTrigger, false)) stateChanged = true;
-        }
-        break;
-      case AMPLITUDE_TRIGGER:
-      {
-        int amp = analogRead(AUDIO_IN_LEFT_PIN);
-        if (amp > AMPLITUDE_THRESH) {
-#ifdef PRINT_AMPLITUDE_THRESH
-          logTimestamp();
-          Serial.print("AMPLITUDE = ");
-          Serial.println(amp);
-#endif
-          if (didUpdate(currentTrigger, true)) stateChanged = true;
-        } else {
-          if (didUpdate(currentTrigger, false)) stateChanged = true;
-        }
-        break;
+
+    if (NULL_TRIGGER == currentTrigger) {
+      //No-op
+      
+    } else if (TEST_CLOCK_TRIGGER == currentTrigger) {
+      static unsigned long msLastTestClockTick;
+      unsigned long msCurrent = millis();
+      if ((msCurrent - msLastTestClockTick) >= msTestClockTickInterval) {
+        //Toggle pin every clock tick
+        if (didUpdate(currentTrigger, !triggerStates[currentTrigger])) stateChanged = true;
+        msLastTestClockTick = msCurrent;
       }
-      default:
-        //Just use the pending value, don't modify it in case this is a continuous trigger
-        if (didUpdate(currentTrigger, pendingTriggerStates[currentTrigger])) stateChanged = true;
-        break;
+      
+    } else if (TICK_TRIGGER == currentTrigger) {
+      if (pendingTriggerStates[currentTrigger]) {
+        pendingTriggerStates[currentTrigger] = false;
+        if (didUpdate(currentTrigger, true)) stateChanged = true; //Update the current trigger state if needed
+      } else {
+        if (didUpdate(currentTrigger, false)) stateChanged = true;
+      }
+
+    } else if (AMPLITUDE_TRIGGER == currentTrigger) {
+      int amp = analogRead(AUDIO_IN_LEFT_PIN);
+      if (amp > AMPLITUDE_THRESH) {
+#ifdef PRINT_AMPLITUDE_THRESH
+        logTimestamp();
+        Serial.print("AMPLITUDE = ");
+        Serial.println(amp);
+#endif
+        if (didUpdate(currentTrigger, true)) stateChanged = true;
+      } else {
+        if (didUpdate(currentTrigger, false)) stateChanged = true;
+      }
+    
+     //DEFAULT TRIGGER BEHAVIOR:
+     } else {
+      //Just use the pending value without modifying it (in case it's continuous)
+      if (didUpdate(currentTrigger, pendingTriggerStates[currentTrigger])) stateChanged = true;
     }
   }
   
 #ifdef PRINT_TRIGGERS
-  //Virtual triggering for debugging purposes:
   if (stateChanged) {
-    logTimestamp();
-    for (int currentTrigger = 0; currentTrigger < NUM_TRIGGERS; currentTrigger++) {
-      byte currentPin = triggerMap[currentTrigger];
-      boolean currentState = triggerStates[currentTrigger];
-      Serial.print(currentPin);
-      Serial.print(currentState ? "[*] " : "[ ] ");
-    }
-    Serial.println("");
+    printTriggers();
   }
 #endif
 
 }
 
+/**
+ * Print information on trigger->pinout assignments and pin HIGH/LOW state for debugging purposes
+ */
+void printTriggers() {
+  logTimestamp();
+  for (int currentTrigger = 0; currentTrigger < NUM_TRIGGERS; currentTrigger++) {
+    byte currentPin = triggerMap[currentTrigger];
+    boolean currentState = triggerStates[currentTrigger];
+    if (currentTrigger != NULL_TRIGGER) {
+      Serial.print("T");
+      Serial.print(currentTrigger);
+    } else {
+      //Just to clarify that this isn't a normal trigger, we'll give it a special name
+      Serial.print("TNULL");
+    }
+    Serial.print("->D");
+    Serial.print(currentPin);
+    Serial.print(currentState ? "[*] " : "[ ] ");
+  }
+  Serial.println("");
+}
+
 boolean didUpdate(byte trigger, boolean state) {
   //Does this trigger need an update? If so, update it and return true. Otherwise, return false.
+  if (trigger == NULL_TRIGGER) return false;  //Skip the null trigger
+  
   if (state != triggerStates[trigger]) {
     triggerStates[trigger] = state;
     digitalWrite(triggerMap[trigger], state ? HIGH : LOW);
