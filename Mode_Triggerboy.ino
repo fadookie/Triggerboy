@@ -12,13 +12,31 @@
  ***************************************************************************/
 #include <fix_fft.h>
 
-//FFT stuff
-#define DATA_SIZE 128
-char im[DATA_SIZE];
-char data[DATA_SIZE];
-#define AUDIO_IN_LEFT_PIN A3
+// --------------------  Trigger config -------------------- //
+const byte NUM_TRIGGERS = 3 + 1; //Set the number on the left to the # of triggers in use. The +1 is for the null trigger
 
-//Print debugging settings
+const byte NULL_TRIGGER = 0; //DO NOT CHANGE!!! Triggers that are currently disabled can redirect their status changes to this trigger, so we don't have to disable the hooks for them throughout the code
+
+//The in-use triggers should be continuous numbers from 1 through (NUM_TRIGGERS - 1.)
+//Extras may be assigned to NULL_TRIGGER to disable them.
+const byte TICK_TRIGGER = 1;
+const byte AMPLITUDE_TRIGGER = 2;
+const byte TEST_CLOCK_TRIGGER = 3;
+const byte LOW_BAND_TRIGGER = NULL_TRIGGER;
+
+//Config for each trigger:
+
+//AMPLITUDE_TRIGGER
+const int vAmplitudeThreshold = 700; //Voltage threshold for this trigger to turn on, this will be a value from analogRead() from 0 to 1023
+
+//TEST_CLOCK_TRIGGER
+const unsigned long msTestClockTickInterval = 1000; //How long to wait between test clock ticks (in milliseconds)
+
+// --------------------  Pin config -------------------- //
+const byte AUDIO_IN_LEFT_PIN = 3; //Read left channel audio from Analog In Pin 3.
+
+// --------------------  Print debugging settings -------------------- //
+//Uncomment a #define to enable printing to serial
 
 //Print FFT every FFT frame:
 //#define PRINT_FFT
@@ -29,29 +47,18 @@ char data[DATA_SIZE];
 //Print amplitude whenever the sample exceeds the threshold:
 //#define PRINT_AMPLITUDE_THRESH
 
-//Trigger config
-const byte NUM_TRIGGERS = 2 + 1; //The +1 is for the null trigger
 
-const byte NULL_TRIGGER = 0; //Triggers that are currently disabled can redirect their status changes to this trigger, so we don't have to disable the hooks for them throughout the code
-
-//The in-use triggers should be continuous numbers from 1 through (NUM_TRIGGERS - 1.)
-//Extras may be assigned to NULL_TRIGGER to effectively disable them.
-const byte TICK_TRIGGER = NULL_TRIGGER;
-const byte TEST_CLOCK_TRIGGER = 1;
-const byte AMPLITUDE_TRIGGER = 2;
-const byte LOW_BAND_TRIGGER = NULL_TRIGGER;
-
-#define AMPLITUDE_THRESH 700
+// --------------------  Data Structures, etc. -------------------- //
 
 //Trigger data structures
 byte triggerMap[NUM_TRIGGERS]; //Assignment of absolute triggers (index) to digital out port number (value)
 boolean triggerStates[NUM_TRIGGERS]; //The current on/off state of each trigger
 boolean pendingTriggerStates[NUM_TRIGGERS]; //Pending changes to on/off state of each trigger on the next update
 
-//Variables for each trigger:
-
-//TEST_CLOCK_TRIGGER
-const unsigned long msTestClockTickInterval = 1000; //How long to wait between test clock ticks (in milliseconds)
+//FFT stuff
+#define DATA_SIZE 128
+char im[DATA_SIZE];
+char data[DATA_SIZE];
 
 void modeTriggerboySetup()
 {
@@ -221,7 +228,7 @@ void triggerShit() {
 
     } else if (AMPLITUDE_TRIGGER == currentTrigger) {
       int amp = analogRead(AUDIO_IN_LEFT_PIN);
-      if (amp > AMPLITUDE_THRESH) {
+      if (amp > vAmplitudeThreshold) {
 #ifdef PRINT_AMPLITUDE_THRESH
         logTimestamp();
         Serial.print("AMPLITUDE = ");
