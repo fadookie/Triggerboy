@@ -13,13 +13,15 @@ The following triggers are currently implemented:
 
  * **Tick** - Pulses on for every clock tick received from LSDJ.
  * **Amplitude** - Turns on for as long as the amplitude of the audio signal on Analog Pin 3 is above a certain threshold.
+ * **Low-band Amplitude** - Turns on for as long as the amplitude of the audio signal is over a certain threshold in the "low band." The unit is currently running an 8-bit FFT, and I'm taking an average of a slice of it on the low end.
+ * **High-band Amplitude** - Turns on for as long as the amplitude of the audio signal is over a certain threshold in the "high band."
  * **Test Clock** - Toggles once per second, this is for testing when no Game Boy is connected.
  * **Null** - Triggers can be disabled with a simple code change by assigning them to the null trigger. If I implement on-the-fly trigger remapping, CPU cycles could be saved by assigning unused triggers to the null trigger at runtime.
 
 ### Planned Triggers
 I'm currently planning or developing the following triggers:
 
- * **Low-band Amplitude** - Turns on for as long as the amplitude of the audio signal is over a certain threshold in the low band. The unit is currently running an 8-bit FFT on the audio that I will be using for this.
+ * **Mid-band Amplitude**
  *  **MIDI out triggers** - I want to take advantage of the MIDI out functionality in Arduinoboy via a special build of LSDJ that sends MIDI notes from the Game Boy to the Arduino, as this should provide really tight sync with the music.
 
 ## Hardware
