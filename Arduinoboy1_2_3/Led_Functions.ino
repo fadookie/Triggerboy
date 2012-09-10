@@ -7,6 +7,7 @@
 void showSelectedMode()
 { 
   if (usbMode) {
+    logTimestamp();
     Serial.print("Switching to mode ");
     Serial.println(memory[MEM_MODE]);
   }

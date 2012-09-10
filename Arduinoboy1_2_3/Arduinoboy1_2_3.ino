@@ -371,9 +371,9 @@ void setup() {
   lastMode = memory[MEM_MODE];
   
   if (usbMode) {
-    Serial.println("Hello Arduinoboy!");
+    logLine("Hello Arduinoboy!");
 #ifdef PRINT_MEMORY
-    Serial.println("Memory dump:");
+    logLine("Memory dump:");
     printMemory();
 #endif
   }
@@ -392,12 +392,16 @@ void loop () {
 }
 
 void logTimestamp() {
-  Serial.print("[");
-  Serial.print(millis());
-  Serial.print("ms] ");
+  if (usbMode) {
+    Serial.print("[");
+    Serial.print(millis());
+    Serial.print("ms] ");
+  }
 }
 
 void logLine(const char * s) {
-  logTimestamp();
-  Serial.println(s);
+  if (usbMode) {
+    logTimestamp();
+    Serial.println(s);
+  }
 }

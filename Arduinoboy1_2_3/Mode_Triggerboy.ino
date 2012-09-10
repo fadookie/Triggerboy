@@ -34,6 +34,8 @@ boolean pendingTriggerStates[NUM_TRIGGERS]; //Pending changes to on/off state of
 
 void modeTriggerboySetup()
 {
+  logLine("Hello Triggerboy!");
+  
   //Set up LSDJ Master Sync
   digitalWrite(pinStatusLed,LOW);
   DDRC  = B00000000; //Set analog in pins as inputs
