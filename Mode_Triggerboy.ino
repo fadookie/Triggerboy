@@ -82,7 +82,6 @@ void modeTriggerboySetup()
   Serial.print("There are currently ");
   Serial.print(NUM_TRIGGERS - 1);
   Serial.println(" active triggers:");
-  printTriggers();
   
   //Configure all mapped pins as outputs
   for (int currentTrigger = 0; currentTrigger < NUM_TRIGGERS; currentTrigger++) {
@@ -103,6 +102,8 @@ void modeTriggerboySetup()
     }
     pinMode(currentPin, OUTPUT);
   }
+  
+  printTriggers();
   
   modeTriggerboy();
 }
@@ -275,7 +276,7 @@ void printTriggers() {
     Serial.print(currentPin);
     Serial.print(currentState ? "[*] " : "[ ] ");
   }
-  Serial.println("");
+  Serial.println(" END"); //I was seeing a bug with just using an empty string here where the serial monitor was appearing to get stuck in a loop, adding END seems to fix it for some reason.
 }
 
 boolean didUpdate(byte trigger, boolean state) {
