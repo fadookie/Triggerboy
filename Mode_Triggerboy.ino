@@ -42,6 +42,11 @@ const float fftaHighBandThreshold = 3.5;
 
 // --------------------  Pin config -------------------- //
 const byte AUDIO_IN_LEFT_PIN = 3; //Read left channel audio from Analog In Pin 3.
+const byte MAX_PIN_OUT = 13; //Largest output pin #
+
+//Some magic numbers for invalid pins, these should never get assigned as real outputs
+const byte INVALID_PIN_MAGIC_NULL_TRIGGER = 255;
+const byte INVALID_PIN_MAGIC_USED_PINS = 254;
 
 // --------------------  Print debugging settings -------------------- //
 //Uncomment a #define to enable printing to serial
@@ -81,8 +86,9 @@ void modeTriggerboySetup()
   countSyncTime=0;
   blinkMaxCount=1000;
   
-  //Set up mapping between triggers and pinouts. It's okay for disabled triggers to be here since they will not fire.
-  //triggerMap[0] = 13 means trigger 0 is assigned to pin 13, etc.
+  //Set up mapping between triggers and pinouts.
+  //ex. "triggerMap[FOO_TRIGGER] = 13" means trigger foo is assigned to pin 13, etc.
+  //It's okay for disabled triggers with conflicting pinouts to be here since they will not fire.
   triggerMap[TICK_TRIGGER]        = 4; //LSDJ Master Clock Ticks.
   triggerMap[AMPLITUDE_TRIGGER]   = 6; //Trigger when audio amplitude is over a certain threshhold
   triggerMap[TEST_CLOCK_TRIGGER]  = 13; //Trigger on an internal timer, for testing outputs independently of the connected inputs
@@ -90,36 +96,78 @@ void modeTriggerboySetup()
   triggerMap[MID_BAND_TRIGGER]    = 6; //Mid-band FFT threshold trigger
   triggerMap[HIGH_BAND_TRIGGER]   = 4; //High-band FFT threshold trigger
   
-  triggerMap[NULL_TRIGGER]        = 255; //A place for currently disabled triggers to dump data. This shouldn't be a real pin and should never be actually written to. Pinout defined after the other ones to overwrite them in case any of them are currently pointing to the null trigger.
+  triggerMap[NULL_TRIGGER]        = INVALID_PIN_MAGIC_NULL_TRIGGER; //A place for currently disabled triggers to dump data. This shouldn't be a real pin and should never be actually written to. Pinout defined after the other ones to overwrite them in case any of them are currently pointing to the null trigger.
   
   logTimestamp();
   Serial.print("There are currently ");
   Serial.print(NUM_TRIGGERS - 1);
   Serial.println(" active triggers:");
   
-  //Configure all mapped pins as outputs
+  //Validate & configure all mapped pins
+  configurePinouts();
+  
+  printTriggers();
+  
+  modeTriggerboy();
+}
+
+/**
+ * Validate the pinout configuration. Then, configure the selected pins as outputs.
+ */
+void configurePinouts() {
+  byte usedPinouts[NUM_TRIGGERS]; //Track which pins we've assigned already so we can catch dupes
+  //Fill usedPinouts array with invalid pin assignments so we can catch issues better
+  memset(usedPinouts, INVALID_PIN_MAGIC_USED_PINS, NUM_TRIGGERS);
+  
   for (int currentTrigger = 0; currentTrigger < NUM_TRIGGERS; currentTrigger++) {
     byte currentPin = triggerMap[currentTrigger];
-    //Sanity check on reserved pins
-    if (
-     (usbMode && (0 == currentPin || 1 == currentPin))
-     || pinButtonMode == currentPin
-    ) {
-      char errorMessage [150];
+        
+    //Sanity range check
+    if (currentPin > MAX_PIN_OUT && currentTrigger != NULL_TRIGGER) {
+      char errorMessage [80];
       sprintf(
         errorMessage,
-        "FATAL ERROR: Trigger %i is assigned to pin %i, which is reserved.\nPlease fix your triggerMap config and re-flash the Arduino.",
+        "Trigger %i is assigned to pin %i, which doesn't exist.",
         currentTrigger,
         currentPin
       );
       fatalError(errorMessage);
     }
+    
+    //Sanity check on reserved pins
+    if (
+     (usbMode && (0 == currentPin || 1 == currentPin))
+     || pinButtonMode == currentPin
+    ) {
+      char errorMessage [70];
+      sprintf(
+        errorMessage,
+        "Trigger %i is assigned to pin %i, which is reserved.",
+        currentTrigger,
+        currentPin
+      );
+      fatalError(errorMessage);
+    }
+    
+    //Sanity check on pins that were already assigned to triggers
+    for (int i = 0; i < NUM_TRIGGERS; i++) {
+      if (currentTrigger == i) continue; //Only compare to other triggers
+      if (usedPinouts[i] == currentPin) {
+        char errorMessage [90];
+        sprintf(
+          errorMessage,
+          "Trigger %i is assigned to pin %i, which is already in use by trigger %i.",
+          currentTrigger,
+          currentPin,
+          i
+        );
+        fatalError(errorMessage);
+      }
+    }
+    
     pinMode(currentPin, OUTPUT);
+    usedPinouts[currentTrigger] = currentPin;
   }
-  
-  printTriggers();
-  
-  modeTriggerboy();
 }
 
 void modeTriggerboy()
@@ -401,7 +449,9 @@ void tb_sendMidiClockSlaveFromLSDJ()
 
 void fatalError(const char * error) {
   if (usbMode) {
+    Serial.print("FATAL ERROR: ");
     Serial.println(error);
+    Serial.println("Please fix this issue and re-flash the Arduino.");
   }
   while(1) { //endless loop to stop main program from looping again
     //Flash an SOS
