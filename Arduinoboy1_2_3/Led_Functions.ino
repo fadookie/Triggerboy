@@ -277,10 +277,9 @@ const int bleepSpacing = 300;
 const int charSpacing = 500;
 const int wordSpacing = 1000;
 
-void morseBlink(String s) {
-  for (int i = 0; i < s.length(); i++) {
-    String c = (String)s.charAt(i);
-    switch(s.charAt(i)) {
+void morseBlink(const char * s) {
+  for (int i = 0; i < strlen(s); i++) {
+    switch(s[i]) {
       case 's':
         morseCharBlink("...");
         break;
@@ -294,9 +293,9 @@ void morseBlink(String s) {
   }
 }
 
-void morseCharBlink(String s) {
-  for (int i = 0; i < s.length(); i++) {
-    switch(s.charAt(i)) {
+void morseCharBlink(const char * s) {
+  for (int i = 0; i < strlen(s); i++) {
+    switch(s[i]) {
       case '.':
         dot();
         break;
