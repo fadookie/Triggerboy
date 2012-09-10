@@ -13,16 +13,16 @@
 #include <fix_fft.h>
 
 // --------------------  Trigger config -------------------- //
-const byte NUM_TRIGGERS = 3 + 1; //Set the number on the left to the # of triggers in use. The +1 is for the null trigger
+const byte NUM_TRIGGERS = 1 + 1; //Set the number on the left to the # of triggers in use. The +1 is for the null trigger
 
 const byte NULL_TRIGGER = 0; //DO NOT CHANGE!!! Triggers that are currently disabled can redirect their status changes to this trigger, so we don't have to disable the hooks for them throughout the code
 
 //The in-use triggers should be continuous numbers from 1 through (NUM_TRIGGERS - 1.)
 //Extras may be assigned to NULL_TRIGGER to disable them.
-const byte TICK_TRIGGER = 1;
-const byte AMPLITUDE_TRIGGER = 2;
-const byte TEST_CLOCK_TRIGGER = 3;
-const byte LOW_BAND_TRIGGER = NULL_TRIGGER;
+const byte TICK_TRIGGER = NULL_TRIGGER;
+const byte AMPLITUDE_TRIGGER = NULL_TRIGGER;
+const byte TEST_CLOCK_TRIGGER = NULL_TRIGGER;
+const byte LOW_BAND_TRIGGER = 1;
 
 //Config for each trigger:
 
@@ -31,6 +31,9 @@ const int vAmplitudeThreshold = 700; //Voltage threshold for this trigger to tur
 
 //TEST_CLOCK_TRIGGER
 const unsigned long msTestClockTickInterval = 1000; //How long to wait between test clock ticks (in milliseconds)
+
+//LOW_BAND_TRIGGER
+const char fftaThreshold = 5; //FFT amplitude threshold for this trigger to turn on
 
 // --------------------  Pin config -------------------- //
 const byte AUDIO_IN_LEFT_PIN = 3; //Read left channel audio from Analog In Pin 3.
@@ -46,6 +49,9 @@ const byte AUDIO_IN_LEFT_PIN = 3; //Read left channel audio from Analog In Pin 3
 
 //Print amplitude whenever the sample exceeds the threshold:
 //#define PRINT_AMPLITUDE_THRESH
+
+//Print low band FFT average:
+//#define PRINT_LOW_BAND_AVG
 
 
 // --------------------  Data Structures, etc. -------------------- //
@@ -75,6 +81,7 @@ void modeTriggerboySetup()
   triggerMap[TICK_TRIGGER]        = 4; //LSDJ Master Clock Ticks.
   triggerMap[AMPLITUDE_TRIGGER]   = 6; //Trigger when audio amplitude is over a certain threshhold
   triggerMap[TEST_CLOCK_TRIGGER]  = 13; //Trigger on an internal timer, for testing outputs independently of the connected inputs
+  triggerMap[LOW_BAND_TRIGGER]    = 6; //Low-band FFT threshold trigger
   
   triggerMap[NULL_TRIGGER]        = 255; //A place for currently disabled triggers to dump data. This shouldn't be a real pin and should never be actually written to. Pinout defined after the other ones to overwrite them in case any of them are currently pointing to the null trigger.
   
@@ -159,9 +166,26 @@ void fft_forward() {
 	  //this could be done with the fix_fftr function without the im array.
 	  fix_fft(data,im,7,0);
 	  // I am only interessted in the absolute value of the transformation
+          int lowBandSum = 0;
+          int lowBandAvgDenominator = 0;
 	  for (i=0; i< 64;i++){
 	     data[i] = sqrt(data[i] * data[i] + im[i] * im[i]);
+             if (i >= 2 && i <= 10) {
+               //Considering this the "low band" for now.
+               lowBandSum += data[i];
+               lowBandAvgDenominator++;
+             }
 	  }
+          //Compute mean average amplitude of the low band
+          int lowBandAvg = lowBandSum / lowBandAvgDenominator;
+          //If this band is above our threshold for the LOW_BAND_TRIGGER, trigger on, otherwise trigger off
+          pendingTriggerStates[LOW_BAND_TRIGGER] = (lowBandAvg > fftaThreshold);
+          
+#ifdef PRINT_LOW_BAND_AVG
+          logTimestamp();
+          Serial.print("low band mean average = ");
+          Serial.println(lowBandAvg);
+#endif
 	  
 	  //do something with the data values 1..64 and ignore im
 #ifdef PRINT_FFT
