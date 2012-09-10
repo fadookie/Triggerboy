@@ -44,6 +44,8 @@ void setMode()
  */
 void switchMode()
 {
+  modeTriggerboySetup();
+  /*
   switch(memory[MEM_MODE])
   {
     case 0:
@@ -77,8 +79,9 @@ void switchMode()
     case 6:
       modeLSDJMidioutSetup();
       break;
-      */
+      *//*
   }
+  */
 }
 
 
