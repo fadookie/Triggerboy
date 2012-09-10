@@ -13,6 +13,7 @@ void showSelectedMode()
   
   digitalWrite(pinStatusLed,LOW);
   
+  /*
   for(int m=0;m<3;m++) {
     switch(memory[MEM_MODE]) {
       case 0:
@@ -46,14 +47,16 @@ void showSelectedMode()
   digitalWrite(pinLeds[4],LOW);
   delay(100);
   }
+  */
   lastMode = memory[MEM_MODE];
-  delay(300);
+  //delay(300);
   
   //if (usbMode) Serial.println("Switching to mode " + memory[MEM_MODE]);
 }
 
 void updateVisualSync()
 {
+  /*
     if(!countSyncTime) {
       if(!blinkSwitch[4]) digitalWrite(pinStatusLed,HIGH);
       digitalWrite(pinLeds[0],LOW);
@@ -69,18 +72,21 @@ void updateVisualSync()
     }
     countSyncTime++;
     if(countSyncTime == 24) countSyncTime=0; 
+    */
 }
 
 
 
 void updateBlinkLights()
 {
+  /*
   updateBlinkLight(0);
   updateBlinkLight(1);
   updateBlinkLight(2);
   updateBlinkLight(3);
   updateBlinkLight(4);
   updateBlinkLight(5);
+  */
 }
 
 void updateBlinkLight(int light)
@@ -109,6 +115,7 @@ void updateStatusLight()
 
 void blinkLight(byte midiMessage, byte midiValue)
 {
+  /*
   if(midiValue) {
   switch(midiMessage) {
     case 0x90:
@@ -142,6 +149,7 @@ void blinkLight(byte midiMessage, byte midiValue)
       blinkSwitch[2]=1;
       blinkSwitchTime[2]=0;
       break;
+      
   }
   }
   switch(midiMessage) {
@@ -162,10 +170,12 @@ void blinkLight(byte midiMessage, byte midiValue)
     default:
       break;
   }
+  */
 }
 
 void updateProgrammerLeds()
 {
+  /*
   if(miscLedTime == miscLedMaxTime) {
     if(sysexProgrammingConnected) {
       miscLedMaxTime = 400;
@@ -180,6 +190,7 @@ void updateProgrammerLeds()
   }
   miscLedTime++;
   updateBlinkLights();
+  */
 }
  /*
    updateStatusLed should be placed inside of the main loop cycle of a mode function. It counts to a 
@@ -223,6 +234,7 @@ void statusLedOn()
 /* cute startup sequence */
 void startupSequence()
 {
+  /*
   int ledFxA;
   int ledFxB;
   
@@ -248,6 +260,13 @@ void startupSequence()
   delay(100);
   for(ledFxA=0;ledFxA<6;ledFxA++) digitalWrite(pinLeds[ledFxA], LOW);      // sets the digital pin as output
   delay(500);
-  
+  */
+}
+
+void blinkSelectedLight(int led)
+{
+      if(!blinkSwitch[led]) digitalWrite(pinLeds[led],HIGH);
+      blinkSwitch[led]=1;
+      blinkSwitchTime[led]=0;
 }
 

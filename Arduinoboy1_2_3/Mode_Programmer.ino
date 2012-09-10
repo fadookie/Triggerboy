@@ -205,11 +205,3 @@ boolean checkForProgrammerSysex(byte sin)
     }
     return false;
 }
-
-
-void blinkSelectedLight(int led)
-{
-      if(!blinkSwitch[led]) digitalWrite(pinLeds[led],HIGH);
-      blinkSwitch[led]=1;
-      blinkSwitchTime[led]=0;
-}
