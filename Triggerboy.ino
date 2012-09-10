@@ -1,18 +1,20 @@
 /***************************************************************************
  ***************************************************************************
- *                         __      _             __                        *
- *         ____ __________/ /_  __(_)___  ____  / /_  ____  __  __         *
- *        / __ `/ ___/ __  / / / / / __ \/ __ \/ __ \/ __ \/ / / /         *
- *       / /_/ / /  / /_/ / /_/ / / / / / /_/ / /_/ / /_/ / /_/ /          *
- *       \__,_/_/   \__,_/\__,_/_/_/ /_/\____/_.___/\____/\__, /           *
- *                                                       /____/            *
+ *          ______     _                       __                          *
+ *         /_  __/____(_)___ _____ ____  _____/ /_  ____  __  __           *
+ *          / / / ___/ / __ `/ __ `/ _ \/ ___/ __ \/ __ \/ / / /           *
+ *         / / / /  / / /_/ / /_/ /  __/ /  / /_/ / /_/ / /_/ /            *
+ *        /_/ /_/  /_/\__, /\__, /\___/_/  /_.___/\____/\__, /             *
+ *                   /____//____/                      /____/              *
  *                                                                         *
  ***************************************************************************
  ***************************************************************************
+ * Website: https://github.com/fadookie/Triggerboy                         *
+ * Author:    Eliot Lash                                                   *
+ * Email:   eliot.lash@gmail.com                                           *
  *                                                                         *
- * Version: 1.2.2                                                          *
- * Date:    Sept 14 2011                                                     *
- * Name:    Timothy Lamb                                                   *
+ * Triggerboy is based heavily on Arduinoboy Version 1.2.3                 *
+ * Author:    Timothy Lamb                                                 *
  * Email:   trash80@gmail.com                                              *
  *                                                                         *
  ***************************************************************************
@@ -31,38 +33,13 @@
  *                                                                         *
  *  http://code.google.com/p/arduinoboy/                                   *
  *                                                                         *
- *   Arduino pin settings:  (Layout is final)                              *
- *     - 6 LEDS on pins 8 to 13                                            *
+ *   Arduino pin settings:  (WIP layout)                                   *
+ *     - Status LED on pin 13                                              *
  *     - Push button on pin 3 (for selecting mode)                         *
- *     - MIDI Opto-isolator power on pin 4                                 *
  *     - Gameboy Clock line on analog in pin 0                             *
  *     - Gameboy Serial Data input on analog in pin 1                      *
  *     - Serial Data from gameboy on analog in pin 2                       *
- *                                                                         *
- * Program Information:                                                    *
- *    LSDJ Slave Mode Midi Note Effects:                                   *
- *      48 - C-2 Sends a Sequencer Start Command                           *
- *      49 - C#2 Sends a Sequencer Stop Command                            *
- *      50 - D-2 Toggles Normal Tempo                                      *
- *      51 - D#2 Toggles 1/2 Tempo                                         *
- *      52 - E-2 Toggles 1/4 Tempo                                         *
- *      53 - F-2 Toggles 1/8 Tempo                                         *
- *                                                                         *
- *    LSDJ Keyboard Mode:                                                  *
- *      48 - C-2 Mute Pu1 Off/On                                           *
- *      49 - C#2 Mute Pu2 Off/On                                           *
- *      50 - D-2 Mute Wav Off/On                                           *
- *      51 - D#2 Mute Noi Off/On                                           *
- *      52 - E-2 Livemode Cue Sequence                                     *
- *      53 - F-2 Livemode Cursor Up                                        *
- *      54 - F#2 Livemode Cursor Down                                      *
- *      55 - G-2 Livemode Cursor Left                                      *
- *      56 - G#2 Livemode Cursor Right                                     *
- *      57 - A-2 Table Up                                                  *
- *      58 - A#2 Table Down                                                *
- *      59 - B-2 Cue Table                                                 *
- *      60 - C-3 to C-8 Notes!                                             *
- *      Prgram Change to select from instrument table                      *
+ *     - Audio line in on analog pin 3                                     *
  *                                                                         *
  ***************************************************************************/
 /***************************************************************************
@@ -371,7 +348,7 @@ void setup() {
   lastMode = memory[MEM_MODE];
   
   if (usbMode) {
-    logLine("Hello Arduinoboy!");
+    logLine("Hello Triggerboy!");
 #ifdef PRINT_MEMORY
     logLine("Memory dump:");
     printMemory();

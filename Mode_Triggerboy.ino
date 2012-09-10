@@ -55,7 +55,7 @@ const unsigned long msTestClockTickInterval = 1000; //How long to wait between t
 
 void modeTriggerboySetup()
 {
-  logLine("Hello Triggerboy!");
+  logLine("Beginning setup of Triggerboy main mode.");
   
   //Set up LSDJ Master Sync
   digitalWrite(pinStatusLed,LOW);
