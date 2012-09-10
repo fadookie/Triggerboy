@@ -1,0 +1,1 @@
+ * Maybe I should make all triggering instantaneous? It's nicely organizd & optimized right now but there might be a trade-off between waiting for the next main loop to do the writes vs. sacrificing speed of repeated calls to digitalWrite() vs the ability to set them all at once via bitmasks later (if I make this optimization.)
