@@ -260,7 +260,9 @@ void printTriggers() {
       Serial.print(currentTrigger);
     } else {
       //Just to clarify that this isn't a normal trigger, we'll give it a special name
-      Serial.print("TNULL");
+      //Serial.print("TNULL");
+      //Actually, let's just not show the null trigger at all, since it's now guaranteed to never write to an actual pinout
+      continue;
     }
     Serial.print("->D");
     Serial.print(currentPin);
