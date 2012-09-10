@@ -13,7 +13,7 @@
 #include <fix_fft.h>
 
 // --------------------  Trigger config -------------------- //
-const byte NUM_TRIGGERS = 1 + 1; //Set the number on the left to the # of triggers in use. The +1 is for the null trigger
+const byte NUM_TRIGGERS = 2 + 1; //Set the number on the left to the # of triggers in use. The +1 is for the null trigger
 
 const byte NULL_TRIGGER = 0; //DO NOT CHANGE!!! Triggers that are currently disabled can redirect their status changes to this trigger, so we don't have to disable the hooks for them throughout the code
 
@@ -23,6 +23,8 @@ const byte TICK_TRIGGER = NULL_TRIGGER;
 const byte AMPLITUDE_TRIGGER = NULL_TRIGGER;
 const byte TEST_CLOCK_TRIGGER = NULL_TRIGGER;
 const byte LOW_BAND_TRIGGER = 1;
+const byte MID_BAND_TRIGGER = NULL_TRIGGER;
+const byte HIGH_BAND_TRIGGER = 2;
 
 //Config for each trigger:
 
@@ -32,8 +34,11 @@ const int vAmplitudeThreshold = 700; //Voltage threshold for this trigger to tur
 //TEST_CLOCK_TRIGGER
 const unsigned long msTestClockTickInterval = 1000; //How long to wait between test clock ticks (in milliseconds)
 
-//LOW_BAND_TRIGGER
-const char fftaThreshold = 5; //FFT amplitude threshold for this trigger to turn on
+//LOW_BAND_TRIGGER, MID_BAND_TRIGGER, HIGH_BAND_TRIGGER
+//FFT amplitude thresholds for trigger to turn on
+const byte fftaLowBandThreshold = 5; //Change this to a float and update the average calculation in fft_forward if decimal precision is needed
+const byte fftaMidBandThreshold = 4; //IFIXME aven't tested this one yet
+const float fftaHighBandThreshold = 3.5; 
 
 // --------------------  Pin config -------------------- //
 const byte AUDIO_IN_LEFT_PIN = 3; //Read left channel audio from Analog In Pin 3.
@@ -51,7 +56,7 @@ const byte AUDIO_IN_LEFT_PIN = 3; //Read left channel audio from Analog In Pin 3
 //#define PRINT_AMPLITUDE_THRESH
 
 //Print low band FFT average:
-//#define PRINT_LOW_BAND_AVG
+//#define PRINT_FFT_BAND_AVGS
 
 
 // --------------------  Data Structures, etc. -------------------- //
@@ -82,6 +87,8 @@ void modeTriggerboySetup()
   triggerMap[AMPLITUDE_TRIGGER]   = 6; //Trigger when audio amplitude is over a certain threshhold
   triggerMap[TEST_CLOCK_TRIGGER]  = 13; //Trigger on an internal timer, for testing outputs independently of the connected inputs
   triggerMap[LOW_BAND_TRIGGER]    = 6; //Low-band FFT threshold trigger
+  triggerMap[MID_BAND_TRIGGER]    = 6; //Mid-band FFT threshold trigger
+  triggerMap[HIGH_BAND_TRIGGER]   = 4; //High-band FFT threshold trigger
   
   triggerMap[NULL_TRIGGER]        = 255; //A place for currently disabled triggers to dump data. This shouldn't be a real pin and should never be actually written to. Pinout defined after the other ones to overwrite them in case any of them are currently pointing to the null trigger.
   
@@ -166,25 +173,47 @@ void fft_forward() {
 	  //this could be done with the fix_fftr function without the im array.
 	  fix_fft(data,im,7,0);
 	  // I am only interessted in the absolute value of the transformation
-          int lowBandSum = 0;
-          int lowBandAvgDenominator = 0;
+          int lowBandSum = 0, midBandSum = 0, highBandSum = 0;
+          int lowBandAvgDenominator = 0, midBandAvgDenominator = 0, highBandAvgDenominator = 0;
 	  for (i=0; i< 64;i++){
 	     data[i] = sqrt(data[i] * data[i] + im[i] * im[i]);
              if (i >= 2 && i <= 10) {
-               //Considering this the "low band" for now.
+               //Considering this the "low band" for now. Too much noise in buckets 0 & 1 to include them.
                lowBandSum += data[i];
                lowBandAvgDenominator++;
+             } else if (i > 10 && i <= 20) {
+               //"mid band"
+               midBandSum += data[i];
+               midBandAvgDenominator++;
+             } else if (i > 20) {
+               //"high band"
+               highBandSum += data[i];
+               highBandAvgDenominator++;
              }
 	  }
-          //Compute mean average amplitude of the low band
-          int lowBandAvg = lowBandSum / lowBandAvgDenominator;
-          //If this band is above our threshold for the LOW_BAND_TRIGGER, trigger on, otherwise trigger off
-          pendingTriggerStates[LOW_BAND_TRIGGER] = (lowBandAvg > fftaThreshold);
+          //Compute mean average amplitude of each FFT band
+          /*FIXME I really want to be able to use fractional numbers here for better granularity on the threshold
+          and avoid remainder chopping, but there's probably a workaround to use integer math here and retain precision using
+          the modulus or something like that. */
+          int lowBandAvg = lowBandSum / lowBandAvgDenominator; //But we don't need float precision on these bands, not yet anyway
+          int midBandAvg = midBandSum / midBandAvgDenominator;
+          //float lowBandAvg = (float)lowBandSum / (float)lowBandAvgDenominator;
+          //float midBandAvg = (float)midBandSum / (float)midBandAvgDenominator;
+          float highBandAvg = (float)highBandSum / (float)highBandAvgDenominator;
           
-#ifdef PRINT_LOW_BAND_AVG
+          //If this band is above our threshold, trigger on, otherwise trigger off
+          pendingTriggerStates[LOW_BAND_TRIGGER] = (lowBandAvg > fftaLowBandThreshold);
+          pendingTriggerStates[MID_BAND_TRIGGER] = (midBandAvg > fftaMidBandThreshold);
+          pendingTriggerStates[HIGH_BAND_TRIGGER] = (highBandAvg > fftaHighBandThreshold);
+          
+#ifdef PRINT_FFT_BAND_AVGS
           logTimestamp();
-          Serial.print("low band mean average = ");
-          Serial.println(lowBandAvg);
+          Serial.print("FFT Band Averages: ");
+          Serial.print(lowBandAvg);
+          Serial.print(" ");
+          Serial.print(midBandAvg);
+          Serial.print(" ");
+          Serial.println(highBandAvg);
 #endif
 	  
 	  //do something with the data values 1..64 and ignore im
