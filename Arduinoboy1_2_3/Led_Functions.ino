@@ -270,3 +270,55 @@ void blinkSelectedLight(int led)
       blinkSwitchTime[led]=0;
 }
 
+//Morse utilities for fatal errors
+const int dotLength = 300;
+const int dashLength = 800;
+const int bleepSpacing = 300;
+const int charSpacing = 500;
+const int wordSpacing = 1000;
+
+void morseBlink(String s) {
+  for (int i = 0; i < s.length(); i++) {
+    String c = (String)s.charAt(i);
+    switch(s.charAt(i)) {
+      case 's':
+        morseCharBlink("...");
+        break;
+      case 'o':
+        morseCharBlink("---");
+        break;
+      case ' ':
+        delay(wordSpacing);
+        break;
+     }
+  }
+}
+
+void morseCharBlink(String s) {
+  for (int i = 0; i < s.length(); i++) {
+    switch(s.charAt(i)) {
+      case '.':
+        dot();
+        break;
+      case '-':
+        dash();
+        break;        
+    }
+  }
+  delay(charSpacing);
+}
+
+void dot() {
+  digitalWrite(pinStatusLed, HIGH);   // set the LED on
+  delay(dotLength);
+  digitalWrite(pinStatusLed, LOW);    // set the LED off
+  delay(bleepSpacing);
+}
+
+void dash() {
+  digitalWrite(pinStatusLed, HIGH);   // set the LED on
+  delay(dashLength);
+  digitalWrite(pinStatusLed, LOW);    // set the LED off
+  delay(bleepSpacing);
+}
+
