@@ -311,7 +311,7 @@ void setup() {
   Set MIDI Serial Rate
 */
   if(usbMode == true) {
-    Serial.begin(38400); //31250
+    Serial.begin(9600); //31250
   } else {
     pinMode(pinMidiInputPower,OUTPUT); 
     digitalWrite(pinMidiInputPower,HIGH); // turn on the optoisolator

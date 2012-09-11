@@ -12,6 +12,17 @@
  ***************************************************************************/
 #include <fix_fft.h>
 
+//Speed improvements for AnalogRead
+#define FASTADC 1
+
+// defines for setting and clearing register bits
+#ifndef cbi
+#define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
+#endif
+#ifndef sbi
+#define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
+#endif
+
 // --------------------  Trigger config -------------------- //
 const byte NUM_TRIGGERS = 1 + 1; //Set the number on the left to the # of triggers in use. The +1 is for the null trigger
 
@@ -87,6 +98,13 @@ char data[DATA_SIZE];
 void modeTriggerboySetup()
 {
   logLine("Beginning setup of Triggerboy main mode.");
+
+#if FASTADC
+  // set prescale to 16
+  sbi(ADCSRA,ADPS2) ;
+  cbi(ADCSRA,ADPS1) ;
+  cbi(ADCSRA,ADPS0) ;
+#endif
   
   //Set up LSDJ Master Sync
   digitalWrite(pinStatusLed,LOW);
