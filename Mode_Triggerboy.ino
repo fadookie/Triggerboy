@@ -13,16 +13,16 @@
 #include <fix_fft.h>
 
 // --------------------  Trigger config -------------------- //
-const byte NUM_TRIGGERS = 3 + 1; //Set the number on the left to the # of triggers in use. The +1 is for the null trigger
+const byte NUM_TRIGGERS = 1 + 1; //Set the number on the left to the # of triggers in use. The +1 is for the null trigger
 
 const byte NULL_TRIGGER = 0; //DO NOT CHANGE!!! Triggers that are currently disabled can redirect their status changes to this trigger, so we don't have to disable the hooks for them throughout the code
 
 //The in-use triggers should be continuous numbers from 1 through (NUM_TRIGGERS - 1.)
 //Extras may be assigned to NULL_TRIGGER to disable them.
 const byte TICK_TRIGGER = 1;
-const byte TICK_TOGGLE_TRIGGER = 2;
+const byte TICK_TOGGLE_TRIGGER = NULL_TRIGGER;
 const byte AMPLITUDE_TRIGGER = NULL_TRIGGER;
-const byte TEST_CLOCK_TRIGGER = 3;
+const byte TEST_CLOCK_TRIGGER = NULL_TRIGGER;
 const byte LOW_BAND_TRIGGER = NULL_TRIGGER;
 const byte MID_BAND_TRIGGER = NULL_TRIGGER;
 const byte HIGH_BAND_TRIGGER = NULL_TRIGGER;
@@ -31,7 +31,7 @@ const byte HIGH_BAND_TRIGGER = NULL_TRIGGER;
 //TICK_TRIGGER, TICK_TOGGLE_TRIGGER
 const byte tickTriggerTicksPerStep = 6;
 const byte tickTriggerStepsPerBeat = 4;
-const unsigned long msTickTriggerPulseDuration = 1;
+const unsigned long msTickTriggerPulseDuration = 2;
 
 //AMPLITUDE_TRIGGER
 const int vAmplitudeThreshold = 700; //Voltage threshold for this trigger to turn on, this will be a value from analogRead() from 0 to 1023
@@ -298,7 +298,13 @@ void print_fft(char * data) {
 
 void alwaysRunActions() {
   //Run these every single loop
-  fft_forward();         //run the FFT
+  //If no FFT-based triggers are currently assigned, skip this entire thing to save clock cyles
+  if (!(LOW_BAND_TRIGGER == NULL_TRIGGER
+      && MID_BAND_TRIGGER == NULL_TRIGGER
+      && HIGH_BAND_TRIGGER == NULL_TRIGGER)) {
+    fft_forward();         //run the FFT
+  }
+
   triggerShit();
 }
 
@@ -439,51 +445,38 @@ boolean tb_checkLSDJStopped()
  */
 void tb_sendMidiClockSlaveFromLSDJ()
 {
+  const byte lsdjTicksPerBeat = tickTriggerTicksPerStep * tickTriggerStepsPerBeat;
 
   if(!countGbClockTicks) {      //If we hit 8 bits
     if(!sequencerStarted) {         //If the sequencer hasnt started
-      if (!usbMode) {
-        Serial.write((0x90+memory[MEM_LSDJMASTER_MIDI_CH])); //Send the midi channel byte
-        Serial.write(readGbSerialIn);                //Send the row value as a note
-        Serial.write(0x7F);                          //Send a velocity 127
-        
-        Serial.write(0xFA);     //send MIDI transport start message 
-      }
       sequencerStart();             //call the global sequencer start function
     }
-    if (usbMode) {
-      static byte lsdjTickCounter; //How many ticks have accumulated since the last step
-      static byte lsdjStepCounter; //How many steps have accumulated since the last beat
 
-      lsdjTickCounter++;
-#ifdef PRINT_LSDJ_TICK_COUNTERS
-      logTimestamp();
-      Serial.println(lsdjTickCounter);
-#endif
-      if (lsdjTickCounter >= tickTriggerTicksPerStep) {
-        lsdjTickCounter = 0;
-        lsdjStepCounter++;
+    static byte lsdjTickCounter; //How many ticks have accumulated since the last beat
 
 #ifdef PRINT_LSDJ_TICK_COUNTERS
-        logTimestamp();
-        Serial.print(lsdjTickCounter);
-        Serial.print(" -> ");
-        Serial.println(lsdjStepCounter);
+    logTimestamp();
+    Serial.print(lsdjTickCounter);
 #endif
-        if (lsdjStepCounter >= tickTriggerStepsPerBeat) {
-          //Drop the beat!
-          lsdjTickCounter = 0;
-          lsdjStepCounter = 0;
-          pendingTriggerStates[TICK_TRIGGER] = true;
-          pendingTriggerStates[TICK_TOGGLE_TRIGGER] = true;
+
+    if (lsdjTickCounter == 0) {
+      //There have been enough ticks to make a beat
+
 #ifdef PRINT_LSDJ_TICK_COUNTERS
-          logLine("0 -> 0 -> BEAT!");
+      Serial.print(" -> BEAT! (At ");
+      Serial.print(lsdjTicksPerBeat);
+      Serial.println(" ppq)");
 #endif
-        }
-      }
+      pendingTriggerStates[TICK_TRIGGER] = true;
+      pendingTriggerStates[TICK_TOGGLE_TRIGGER] = true;
     } else {
-      Serial.write(0xF8);       //Send the MIDI Clock Tick
+#ifdef PRINT_LSDJ_TICK_COUNTERS
+      Serial.println("");
+#endif
     }
+
+    lsdjTickCounter++;
+    if (lsdjTickCounter == lsdjTicksPerBeat) lsdjTickCounter = 0; 
     
     countGbClockTicks=0;            //Reset the bit counter
     readGbSerialIn = 0x00;                //Reset our serial read value
