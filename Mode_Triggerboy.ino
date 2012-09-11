@@ -236,69 +236,68 @@ void fft_forward() {
   static long tt;
   int val;
   
-   if (millis() > tt){
-	if (i < DATA_SIZE){
-	  val = analogRead(AUDIO_IN_LEFT_PIN);
-	  data[i] = val / 4 - DATA_SIZE;
-	  im[i] = 0;
-	  i++;  
-	  
-	}
-	else{
-	  //this could be done with the fix_fftr function without the im array.
-	  fix_fft(data,im,7,0);
-	  // I am only interessted in the absolute value of the transformation
-          int lowBandSum = 0, midBandSum = 0, highBandSum = 0;
-          int lowBandAvgDenominator = 0, midBandAvgDenominator = 0, highBandAvgDenominator = 0;
-	  for (i=0; i< 64;i++){
-	     data[i] = sqrt(data[i] * data[i] + im[i] * im[i]);
-             if (i >= 2 && i <= 10) {
-               //Considering this the "low band" for now. Too much noise in buckets 0 & 1 to include them.
-               lowBandSum += data[i];
-               lowBandAvgDenominator++;
-             } else if (i > 10 && i <= 20) {
-               //"mid band"
-               midBandSum += data[i];
-               midBandAvgDenominator++;
-             } else if (i > 20) {
-               //"high band"
-               highBandSum += data[i];
-               highBandAvgDenominator++;
-             }
-	  }
-          //Compute mean average amplitude of each FFT band
-          /*FIXME I really want to be able to use fractional numbers here for better granularity on the threshold
-          and avoid remainder chopping, but there's probably a workaround to use integer math here and retain precision using
-          the modulus or something like that. */
-          int lowBandAvg = lowBandSum / lowBandAvgDenominator; //But we don't need float precision on these bands, not yet anyway
-          int midBandAvg = midBandSum / midBandAvgDenominator;
-          //float lowBandAvg = (float)lowBandSum / (float)lowBandAvgDenominator;
-          //float midBandAvg = (float)midBandSum / (float)midBandAvgDenominator;
-          float highBandAvg = (float)highBandSum / (float)highBandAvgDenominator;
-          
-          //If this band is above our threshold, trigger on, otherwise trigger off
-          pendingTriggerStates[LOW_BAND_TRIGGER] = (lowBandAvg > fftaLowBandThreshold);
-          pendingTriggerStates[MID_BAND_TRIGGER] = (midBandAvg > fftaMidBandThreshold);
-          pendingTriggerStates[HIGH_BAND_TRIGGER] = (highBandAvg > fftaHighBandThreshold);
-          
+  if (millis() > tt) {
+    if (i < DATA_SIZE) {
+      val = analogRead(AUDIO_IN_LEFT_PIN);
+      data[i] = val / 4 - DATA_SIZE;
+      //im[i] = 0;
+      i++;  
+      
+    } else {
+      //this could be done with the fix_fftr function without the im array.
+      fix_fftr(data,7,0);
+      // I am only interessted in the absolute value of the transformation
+      int lowBandSum = 0, midBandSum = 0, highBandSum = 0;
+      int lowBandAvgDenominator = 0, midBandAvgDenominator = 0, highBandAvgDenominator = 0;
+      for (i=0; i< 64;i++) {
+         //data[i] = sqrt(data[i] * data[i] + im[i] * im[i]);
+         if (i >= 2 && i <= 10) {
+           //Considering this the "low band" for now. Too much noise in buckets 0 & 1 to include them.
+           lowBandSum += data[i];
+           lowBandAvgDenominator++;
+         } else if (i > 10 && i <= 20) {
+           //"mid band"
+           midBandSum += data[i];
+           midBandAvgDenominator++;
+         } else if (i > 20) {
+           //"high band"
+           highBandSum += data[i];
+           highBandAvgDenominator++;
+         }
+      }
+      //Compute mean average amplitude of each FFT band
+      /*FIXME I really want to be able to use fractional numbers here for better granularity on the threshold
+      and avoid remainder chopping, but there's probably a workaround to use integer math here and retain precision using
+      the modulus or something like that. */
+      int lowBandAvg = lowBandSum / lowBandAvgDenominator; //But we don't need float precision on these bands, not yet anyway
+      int midBandAvg = midBandSum / midBandAvgDenominator;
+      //float lowBandAvg = (float)lowBandSum / (float)lowBandAvgDenominator;
+      //float midBandAvg = (float)midBandSum / (float)midBandAvgDenominator;
+      float highBandAvg = (float)highBandSum / (float)highBandAvgDenominator;
+      
+      //If this band is above our threshold, trigger on, otherwise trigger off
+      pendingTriggerStates[LOW_BAND_TRIGGER] = (lowBandAvg > fftaLowBandThreshold);
+      pendingTriggerStates[MID_BAND_TRIGGER] = (midBandAvg > fftaMidBandThreshold);
+      pendingTriggerStates[HIGH_BAND_TRIGGER] = (highBandAvg > fftaHighBandThreshold);
+      
 #ifdef PRINT_FFT_BAND_AVGS
-          logTimestamp();
-          Serial.print("FFT Band Averages: ");
-          Serial.print(lowBandAvg);
-          Serial.print(" ");
-          Serial.print(midBandAvg);
-          Serial.print(" ");
-          Serial.println(highBandAvg);
+      logTimestamp();
+      Serial.print("FFT Band Averages: ");
+      Serial.print(lowBandAvg);
+      Serial.print(" ");
+      Serial.print(midBandAvg);
+      Serial.print(" ");
+      Serial.println(highBandAvg);
 #endif
-	  
-	  //do something with the data values 1..64 and ignore im
+      
+      //do something with the data values 1..64 and ignore im
 #ifdef PRINT_FFT
-	  print_fft(data);
+      print_fft(data);
 #endif
-	}
+    }
     
     tt = millis();
-   }
+  }
 }
 
 #ifdef PRINT_FFT
