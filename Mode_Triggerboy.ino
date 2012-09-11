@@ -31,8 +31,8 @@ const byte NULL_TRIGGER = 0; //DO NOT CHANGE!!! Triggers that are currently disa
 //The in-use triggers should be continuous numbers from 1 through (NUM_TRIGGERS - 1.)
 //Extras may be assigned to NULL_TRIGGER to disable them.
 const byte TICK_TRIGGER = 1;
-const byte TICK_TOGGLE_TRIGGER = 2;
-const byte AMPLITUDE_TRIGGER = NULL_TRIGGER;
+const byte TICK_TOGGLE_TRIGGER = NULL_TRIGGER;
+const byte AMPLITUDE_TRIGGER = 2;
 const byte TEST_CLOCK_TRIGGER = NULL_TRIGGER;
 const byte LOW_BAND_TRIGGER = NULL_TRIGGER;
 const byte MID_BAND_TRIGGER = NULL_TRIGGER;
@@ -372,16 +372,21 @@ void triggerShit() {
         if (didUpdate(currentTrigger, !triggerStates[currentTrigger])) stateChanged = true; //Update the current trigger state if needed
       }
     } else if (AMPLITUDE_TRIGGER == currentTrigger) {
-      int amp = analogRead(AUDIO_IN_LEFT_PIN);
-      if (amp > vAmplitudeThreshold) {
-#ifdef PRINT_AMPLITUDE_THRESH
-        logTimestamp();
-        Serial.print("AMPLITUDE = ");
-        Serial.println(amp);
-#endif
-        if (didUpdate(currentTrigger, true)) stateChanged = true;
-      } else {
-        if (didUpdate(currentTrigger, false)) stateChanged = true;
+      static unsigned long msLastReadTime;
+      if (millis() > msLastReadTime) {
+        //Sample every millisecond
+        int amp = analogRead(AUDIO_IN_LEFT_PIN);
+        if (amp > vAmplitudeThreshold) {
+  #ifdef PRINT_AMPLITUDE_THRESH
+          logTimestamp();
+          Serial.print("AMPLITUDE = ");
+          Serial.println(amp);
+  #endif
+          if (didUpdate(currentTrigger, true)) stateChanged = true;
+        } else {
+          if (didUpdate(currentTrigger, false)) stateChanged = true;
+        }
+        msLastReadTime = millis();
       }
     
      //DEFAULT TRIGGER BEHAVIOR:
