@@ -13,20 +13,25 @@
 #include <fix_fft.h>
 
 // --------------------  Trigger config -------------------- //
-const byte NUM_TRIGGERS = 2 + 1; //Set the number on the left to the # of triggers in use. The +1 is for the null trigger
+const byte NUM_TRIGGERS = 3 + 1; //Set the number on the left to the # of triggers in use. The +1 is for the null trigger
 
 const byte NULL_TRIGGER = 0; //DO NOT CHANGE!!! Triggers that are currently disabled can redirect their status changes to this trigger, so we don't have to disable the hooks for them throughout the code
 
 //The in-use triggers should be continuous numbers from 1 through (NUM_TRIGGERS - 1.)
 //Extras may be assigned to NULL_TRIGGER to disable them.
-const byte TICK_TRIGGER = NULL_TRIGGER;
+const byte TICK_TRIGGER = 1;
+const byte TICK_TOGGLE_TRIGGER = 2;
 const byte AMPLITUDE_TRIGGER = NULL_TRIGGER;
-const byte TEST_CLOCK_TRIGGER = NULL_TRIGGER;
-const byte LOW_BAND_TRIGGER = 1;
+const byte TEST_CLOCK_TRIGGER = 3;
+const byte LOW_BAND_TRIGGER = NULL_TRIGGER;
 const byte MID_BAND_TRIGGER = NULL_TRIGGER;
-const byte HIGH_BAND_TRIGGER = 2;
+const byte HIGH_BAND_TRIGGER = NULL_TRIGGER;
 
 //Config for each trigger:
+//TICK_TRIGGER, TICK_TOGGLE_TRIGGER
+const byte tickTriggerTicksPerStep = 6;
+const byte tickTriggerStepsPerBeat = 4;
+const unsigned long msTickTriggerPulseDuration = 1;
 
 //AMPLITUDE_TRIGGER
 const int vAmplitudeThreshold = 700; //Voltage threshold for this trigger to turn on, this will be a value from analogRead() from 0 to 1023
@@ -63,6 +68,9 @@ const byte INVALID_PIN_MAGIC_USED_PINS = 254;
 //Print low band FFT average:
 //#define PRINT_FFT_BAND_AVGS
 
+//Print LSDJ tick/step/beat counters
+//#define PRINT_LSDJ_TICK_COUNTERS
+
 
 // --------------------  Data Structures, etc. -------------------- //
 
@@ -89,7 +97,8 @@ void modeTriggerboySetup()
   //Set up mapping between triggers and pinouts.
   //ex. "triggerMap[FOO_TRIGGER] = 13" means trigger foo is assigned to pin 13, etc.
   //It's okay for disabled triggers with conflicting pinouts to be here since they will not fire.
-  triggerMap[TICK_TRIGGER]        = 4; //LSDJ Master Clock Ticks.
+  triggerMap[TICK_TRIGGER]        = 4; //Pulse in time with LSDJ Master Clock.
+  triggerMap[TICK_TOGGLE_TRIGGER] = 6; //Toggle on/off in time with LSDJ Master Clock.
   triggerMap[AMPLITUDE_TRIGGER]   = 6; //Trigger when audio amplitude is over a certain threshhold
   triggerMap[TEST_CLOCK_TRIGGER]  = 13; //Trigger on an internal timer, for testing outputs independently of the connected inputs
   triggerMap[LOW_BAND_TRIGGER]    = 6; //Low-band FFT threshold trigger
@@ -315,19 +324,29 @@ void triggerShit() {
       static unsigned long msLastTestClockTick;
       unsigned long msCurrent = millis();
       if ((msCurrent - msLastTestClockTick) >= msTestClockTickInterval) {
-        //Toggle pin every clock tick
+        //Toggle trigger on every tick of this timer
         if (didUpdate(currentTrigger, !triggerStates[currentTrigger])) stateChanged = true;
         msLastTestClockTick = msCurrent;
       }
       
     } else if (TICK_TRIGGER == currentTrigger) {
+      static unsigned long msTickTriggerPulseBegan;
       if (pendingTriggerStates[currentTrigger]) {
         pendingTriggerStates[currentTrigger] = false;
         if (didUpdate(currentTrigger, true)) stateChanged = true; //Update the current trigger state if needed
-      } else {
+        //Start timer for pulse
+        msTickTriggerPulseBegan = millis();
+      } else if (triggerStates[currentTrigger] && ((millis() - msTickTriggerPulseBegan) > msTickTriggerPulseDuration)) {
+        //If trigger is on but the pulse should be over, turn the trigger off
         if (didUpdate(currentTrigger, false)) stateChanged = true;
       }
 
+    } else if (TICK_TOGGLE_TRIGGER == currentTrigger) {
+      if (pendingTriggerStates[currentTrigger]) {
+        pendingTriggerStates[currentTrigger] = false;
+        //Toggle the pin
+        if (didUpdate(currentTrigger, !triggerStates[currentTrigger])) stateChanged = true; //Update the current trigger state if needed
+      }
     } else if (AMPLITUDE_TRIGGER == currentTrigger) {
       int amp = analogRead(AUDIO_IN_LEFT_PIN);
       if (amp > vAmplitudeThreshold) {
@@ -420,6 +439,7 @@ boolean tb_checkLSDJStopped()
  */
 void tb_sendMidiClockSlaveFromLSDJ()
 {
+
   if(!countGbClockTicks) {      //If we hit 8 bits
     if(!sequencerStarted) {         //If the sequencer hasnt started
       if (!usbMode) {
@@ -432,8 +452,35 @@ void tb_sendMidiClockSlaveFromLSDJ()
       sequencerStart();             //call the global sequencer start function
     }
     if (usbMode) {
-      //logLine("Triggerboy: Tick");
-      pendingTriggerStates[TICK_TRIGGER] = true;
+      static byte lsdjTickCounter; //How many ticks have accumulated since the last step
+      static byte lsdjStepCounter; //How many steps have accumulated since the last beat
+
+      lsdjTickCounter++;
+#ifdef PRINT_LSDJ_TICK_COUNTERS
+      logTimestamp();
+      Serial.println(lsdjTickCounter);
+#endif
+      if (lsdjTickCounter >= tickTriggerTicksPerStep) {
+        lsdjTickCounter = 0;
+        lsdjStepCounter++;
+
+#ifdef PRINT_LSDJ_TICK_COUNTERS
+        logTimestamp();
+        Serial.print(lsdjTickCounter);
+        Serial.print(" -> ");
+        Serial.println(lsdjStepCounter);
+#endif
+        if (lsdjStepCounter >= tickTriggerStepsPerBeat) {
+          //Drop the beat!
+          lsdjTickCounter = 0;
+          lsdjStepCounter = 0;
+          pendingTriggerStates[TICK_TRIGGER] = true;
+          pendingTriggerStates[TICK_TOGGLE_TRIGGER] = true;
+#ifdef PRINT_LSDJ_TICK_COUNTERS
+          logLine("0 -> 0 -> BEAT!");
+#endif
+        }
+      }
     } else {
       Serial.write(0xF8);       //Send the MIDI Clock Tick
     }

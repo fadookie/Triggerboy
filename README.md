@@ -1,5 +1,5 @@
 # Triggerboy
-Triggerboy is an application for the [Arduino hardware platform](http://arduino.cc/) that is intended to interface with [LittleSoundDJ](http://littlesounddj.com/) sequencer. It is intended as a tool to aid in the generation of live visuals for performances involving LSDJ. It analyzes various outputs from the Game Boy and triggers the digital out pins on the Arduino.
+Triggerboy is an application for the [Arduino hardware platform](http://arduino.cc/) that is intended to interface with the [LittleSoundDJ](http://littlesounddj.com/) sequencer. It is intended as a tool to aid in the generation of live visuals for performances involving LSDJ. It analyzes various outputs from the Game Boy and triggers the digital out pins on the Arduino.
 
 This is very much a work in progress!
 
