@@ -240,17 +240,18 @@ void fft_forward() {
     if (i < DATA_SIZE) {
       val = analogRead(AUDIO_IN_LEFT_PIN);
       data[i] = val / 4 - DATA_SIZE;
-      //im[i] = 0;
+      im[i] = 0;
       i++;  
       
     } else {
       //this could be done with the fix_fftr function without the im array.
-      fix_fftr(data,7,0);
+      //fix_fftr(data,7,0);
+      fix_fft(data, im, 7, 0);
       // I am only interessted in the absolute value of the transformation
       int lowBandSum = 0, midBandSum = 0, highBandSum = 0;
       int lowBandAvgDenominator = 0, midBandAvgDenominator = 0, highBandAvgDenominator = 0;
       for (i=0; i< 64;i++) {
-         //data[i] = sqrt(data[i] * data[i] + im[i] * im[i]);
+         data[i] = sqrt(data[i] * data[i] + im[i] * im[i]);
          if (i >= 2 && i <= 10) {
            //Considering this the "low band" for now. Too much noise in buckets 0 & 1 to include them.
            lowBandSum += data[i];
