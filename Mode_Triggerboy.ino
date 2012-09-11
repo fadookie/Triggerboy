@@ -24,16 +24,16 @@
 #endif
 
 // --------------------  Trigger config -------------------- //
-const byte NUM_TRIGGERS = 2 + 1; //Set the number on the left to the # of triggers in use. The +1 is for the null trigger
+const byte NUM_TRIGGERS = 3 + 1; //Set the number on the left to the # of triggers in use. The +1 is for the null trigger
 
 const byte NULL_TRIGGER = 0; //DO NOT CHANGE!!! Triggers that are currently disabled can redirect their status changes to this trigger, so we don't have to disable the hooks for them throughout the code
 
 //The in-use triggers should be continuous numbers from 1 through (NUM_TRIGGERS - 1.)
 //Extras may be assigned to NULL_TRIGGER to disable them.
 const byte TICK_TRIGGER = 1;
-const byte TICK_TOGGLE_TRIGGER = NULL_TRIGGER;
-const byte AMPLITUDE_TRIGGER = 2;
-const byte TEST_CLOCK_TRIGGER = NULL_TRIGGER;
+const byte TICK_TOGGLE_TRIGGER = 2;
+const byte AMPLITUDE_TRIGGER = NULL_TRIGGER;
+const byte TEST_CLOCK_TRIGGER = 3;
 const byte LOW_BAND_TRIGGER = NULL_TRIGGER;
 const byte MID_BAND_TRIGGER = NULL_TRIGGER;
 const byte HIGH_BAND_TRIGGER = NULL_TRIGGER;
