@@ -90,7 +90,7 @@ const byte INVALID_PIN_MAGIC_USED_PINS = 254;
 //Trigger data structures
 byte triggerMap[NUM_TRIGGERS]; //Assignment of absolute triggers (index) to digital out port number (value)
 boolean triggerStates[NUM_TRIGGERS]; //The current on/off state of each trigger
-boolean pendingTriggerStates[NUM_TRIGGERS]; //Pending changes to on/off state of each trigger on the next update
+volatile boolean pendingTriggerStates[NUM_TRIGGERS]; //Pending changes to on/off state of each trigger on the next update
 
 //FFT stuff
 #define DATA_SIZE 128
@@ -217,37 +217,37 @@ void modeTriggerboyCleanup() {
  * Interrupt handler for when GB_CLOCK_LINE_PIN turns on
  */
 void handleGbClockLineByte() {
+  /*
+    readgbClockLine = PINC & 0x01; //Read gameboy's clock line
+    if(readgbClockLine) {                          //If Gb's Clock is On
+      while(readgbClockLine) {                     //Loop untill its off
+        readgbClockLine = PINC & 0x01;            //Read the clock again
+        bit = (PINC & 0x04)>>2;                   //Read the serial input for song position
+      }
+    }
+    */
+    tb_sendMidiClockSlaveFromLSDJ();
 }
 
 void modeTriggerboy()
 {
   while(1){
     //Process LSDJ Master Sync
+    /*
     if (Serial.available()) {                  //If serial data was send to midi input
       incomingMidiByte = Serial.read();            //Read it
       if(!checkForProgrammerSysex(incomingMidiByte) && !usbMode) Serial.write(incomingMidiByte);        //Send it to the midi output
     }
-    readgbClockLine = PINC & 0x01; //Read gameboy's clock line
-    if(readgbClockLine) {                          //If Gb's Clock is On
-      while(readgbClockLine) {                     //Loop untill its off
-        readgbClockLine = PINC & 0x01;            //Read the clock again
-        bit = (PINC & 0x04)>>2;                   //Read the serial input for song position
-        tb_checkActions();
-        alwaysRunActions(); //Do stuff that should happen on every loop
-      }
+    */
       
-      countClockPause= 0;                          //Reset our wait timer for detecting a sequencer stop
-      
-      readGbSerialIn = readGbSerialIn << 1;        //left shift the serial byte by one to append new bit from last loop
-      readGbSerialIn = readGbSerialIn + bit;       //and then add the bit that was read
-
-      tb_sendMidiClockSlaveFromLSDJ();                //send the clock & start offset data to midi
-      
-    } else {
-      //Still do stuff if we are waiting for the GB clock, i.e. if it's disconnected
-      alwaysRunActions();
-    }
+    countClockPause= 0;                          //Reset our wait timer for detecting a sequencer stop
     
+    //readGbSerialIn = readGbSerialIn << 1;        //left shift the serial byte by one to append new bit from last loop
+    //readGbSerialIn = readGbSerialIn + bit;       //and then add the bit that was read
+    
+    tb_checkActions();
+    alwaysRunActions(); //Do stuff that should happen on every loop
+
     setMode();
   }
 }
@@ -497,7 +497,7 @@ void tb_sendMidiClockSlaveFromLSDJ()
       sequencerStart();             //call the global sequencer start function
     }
 
-    static byte lsdjTickCounter; //How many ticks have accumulated since the last beat
+    volatile static byte lsdjTickCounter; //How many ticks have accumulated since the last beat
 
 #ifdef PRINT_LSDJ_TICK_COUNTERS
     logTimestamp();
@@ -524,9 +524,9 @@ void tb_sendMidiClockSlaveFromLSDJ()
     if (lsdjTickCounter == lsdjTicksPerBeat) lsdjTickCounter = 0; 
     
     countGbClockTicks=0;            //Reset the bit counter
-    readGbSerialIn = 0x00;                //Reset our serial read value
+    //readGbSerialIn = 0x00;                //Reset our serial read value
     
-    updateVisualSync();
+    //updateVisualSync();
   }
   countGbClockTicks++;              //Increment the bit counter
  if(countGbClockTicks==8) countGbClockTicks=0; 

@@ -173,7 +173,7 @@ int midioutByteDelay = 0;
 /***************************************************************************
 * Switches and states
 ***************************************************************************/
-boolean sequencerStarted = false;        //Sequencer has Started
+volatile boolean sequencerStarted = false;        //Sequencer has Started
 boolean midiSyncEffectsTime = false;
 boolean midiNoteOnMode   =false;
 boolean midiNoteOffMode  =false;
@@ -197,7 +197,7 @@ unsigned long int buttonTime;
 
 boolean blinkSwitch[6];
 unsigned long int blinkSwitchTime[6];
-int switchLight = 0;
+volatile int switchLight = 0;
 
 int blinkMaxCount = 1000;
 
@@ -210,11 +210,11 @@ int midioutNoteTimerThreshold = 10;
 * Counter vars
 ***************************************************************************/
 int countLSDJTicks = 0;            //for loop int (we need to cycle 8 pulses)
-int countSyncTime  = 0;
-int countSyncLightTime=0;
-int countSyncSteps = 0;
-int countSyncPulse = 0;
-int countGbClockTicks =0;
+volatile int countSyncTime  = 0;
+volatile int countSyncLightTime=0;
+volatile int countSyncSteps = 0;
+volatile int countSyncPulse = 0;
+volatile int countGbClockTicks =0;
 int countClockPause =0;
 int countIncommingMidiByte =0;
 int countStatusLedOn =0;
@@ -230,7 +230,7 @@ unsigned long int miscLedMaxTime;
 ***************************************************************************/
 byte incomingMidiByte;  //incomming midi message
 byte readgbClockLine;
-byte readGbSerialIn;
+volatile byte readGbSerialIn;
 byte bit;
 byte midiData[] = {0, 0, 0};
 byte lastMidiData[] = {0, 0, 0};

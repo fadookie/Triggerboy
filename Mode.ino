@@ -26,6 +26,7 @@
 
 void setMode()
 {
+  /*
   buttonDepressed = digitalRead(pinButtonMode);
   if(!memory[MEM_FORCE_MODE] && buttonDepressed) { //if the button is pressed
     memory[MEM_MODE]++;                           //increment the mode number
@@ -34,6 +35,7 @@ void setMode()
     showSelectedMode();            //set the LEDS
     switchMode();
   }
+  */
 }
 
 
@@ -44,7 +46,7 @@ void setMode()
  */
 void switchMode()
 {
-  modeTriggerboyCleanup();
+  //modeTriggerboyCleanup();
   modeTriggerboySetup();
   /*
   switch(memory[MEM_MODE])
