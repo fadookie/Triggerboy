@@ -58,6 +58,8 @@ const float fftaHighBandThreshold = 3.5;
 
 // --------------------  Pin config -------------------- //
 const byte AUDIO_IN_LEFT_PIN = 3; //Read left channel audio from Analog In Pin 3.
+const byte GB_CLOCK_LINE_PIN = 2; //Digital pin for GB clock line external interrupt
+byte GB_CLOCK_LINE_INTERRUPT_NUMBER = 3; //Which interrupt the GB clock line is on. Initialize to invalid # so we know if it was set properly in configurePinouts()
 const byte MAX_PIN_OUT = 13; //Largest output pin #
 
 //Some magic numbers for invalid pins, these should never get assigned as real outputs
@@ -164,6 +166,7 @@ void configurePinouts() {
     //Sanity check on reserved pins
     if (
      (usbMode && (0 == currentPin || 1 == currentPin))
+     || GB_CLOCK_LINE_PIN  == currentPin
      || pinButtonMode == currentPin
     ) {
       char errorMessage [70];
@@ -195,6 +198,25 @@ void configurePinouts() {
     pinMode(currentPin, OUTPUT);
     usedPinouts[currentTrigger] = currentPin;
   }
+
+  //Register external interrupt handler for GB clock line
+  if (GB_CLOCK_LINE_PIN > 3 || GB_CLOCK_LINE_PIN < 2) {
+    fatalError("GB_CLOCK_LINE_PIN must be set to either digital pin 2 or 3!");
+  }
+  GB_CLOCK_LINE_INTERRUPT_NUMBER = GB_CLOCK_LINE_PIN - 2;
+  tb_assert(0 == GB_CLOCK_LINE_INTERRUPT_NUMBER || 1 == GB_CLOCK_LINE_INTERRUPT_NUMBER, "GB_CLOCK_LINE_INTERRUPT_NUMBER is valid");
+  pinMode(GB_CLOCK_LINE_PIN, INPUT);
+  attachInterrupt(GB_CLOCK_LINE_INTERRUPT_NUMBER, handleGbClockLineByte, RISING);
+}
+
+void modeTriggerboyCleanup() {
+  detachInterrupt(GB_CLOCK_LINE_INTERRUPT_NUMBER);
+}
+
+/**
+ * Interrupt handler for when GB_CLOCK_LINE_PIN turns on
+ */
+void handleGbClockLineByte() {
 }
 
 void modeTriggerboy()
@@ -508,6 +530,19 @@ void tb_sendMidiClockSlaveFromLSDJ()
   }
   countGbClockTicks++;              //Increment the bit counter
  if(countGbClockTicks==8) countGbClockTicks=0; 
+}
+
+void tb_assert(bool assertion, const char * description) {
+  //Holy hell. I'm jumping through some nice hoops to not use String... oh well!
+  const byte prefixSize = 22;
+  const byte descriptionMaxSize = 150;
+  const byte bufSize = prefixSize + descriptionMaxSize;
+  char descriptionPrefix[prefixSize] = "An assertion failed: ";
+  char descriptionFinal[bufSize];
+  char *descriptionFinalPtr = &descriptionFinal[0];
+  strncpy(descriptionFinalPtr, &descriptionPrefix[0], prefixSize);
+  strncpy(descriptionFinalPtr + (prefixSize - 1), description, descriptionMaxSize);
+  if (!assertion) fatalError(descriptionFinal);
 }
 
 void fatalError(const char * error) {

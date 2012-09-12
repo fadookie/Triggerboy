@@ -44,6 +44,7 @@ void setMode()
  */
 void switchMode()
 {
+  modeTriggerboyCleanup();
   modeTriggerboySetup();
   /*
   switch(memory[MEM_MODE])
