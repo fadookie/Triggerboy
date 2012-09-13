@@ -33,7 +33,8 @@ const byte NULL_TRIGGER = 0; //DO NOT CHANGE!!! Triggers that are currently disa
 const byte TICK_TRIGGER = 1;
 const byte TICK_TOGGLE_TRIGGER = 2;
 const byte AMPLITUDE_TRIGGER = NULL_TRIGGER;
-const byte TEST_CLOCK_TRIGGER = 3;
+const byte TEST_CLOCK_TRIGGER = NULL_TRIGGER;
+const byte TEST_INTERRUPT_TRIGGER = 3;
 const byte LOW_BAND_TRIGGER = NULL_TRIGGER;
 const byte MID_BAND_TRIGGER = NULL_TRIGGER;
 const byte HIGH_BAND_TRIGGER = NULL_TRIGGER;
@@ -121,6 +122,7 @@ void modeTriggerboySetup()
   triggerMap[TICK_TOGGLE_TRIGGER] = 6; //Toggle on/off in time with LSDJ Master Clock.
   triggerMap[AMPLITUDE_TRIGGER]   = 6; //Trigger when audio amplitude is over a certain threshhold
   triggerMap[TEST_CLOCK_TRIGGER]  = 13; //Trigger on an internal timer, for testing outputs independently of the connected inputs
+  triggerMap[TEST_INTERRUPT_TRIGGER] = 13; //Trigger on an interrupt handler
   triggerMap[LOW_BAND_TRIGGER]    = 6; //Low-band FFT threshold trigger
   triggerMap[MID_BAND_TRIGGER]    = 6; //Mid-band FFT threshold trigger
   triggerMap[HIGH_BAND_TRIGGER]   = 4; //High-band FFT threshold trigger
@@ -206,7 +208,7 @@ void configurePinouts() {
   GB_CLOCK_LINE_INTERRUPT_NUMBER = GB_CLOCK_LINE_PIN - 2;
   tb_assert(0 == GB_CLOCK_LINE_INTERRUPT_NUMBER || 1 == GB_CLOCK_LINE_INTERRUPT_NUMBER, "GB_CLOCK_LINE_INTERRUPT_NUMBER is valid");
   pinMode(GB_CLOCK_LINE_PIN, INPUT);
-  attachInterrupt(GB_CLOCK_LINE_INTERRUPT_NUMBER, handleGbClockLineByte, RISING);
+  attachInterrupt(GB_CLOCK_LINE_INTERRUPT_NUMBER, handleGbClockLineByte, FALLING);
 }
 
 void modeTriggerboyCleanup() {
@@ -217,6 +219,7 @@ void modeTriggerboyCleanup() {
  * Interrupt handler for when GB_CLOCK_LINE_PIN turns on
  */
 void handleGbClockLineByte() {
+    pendingTriggerStates[TEST_INTERRUPT_TRIGGER] = true;
   /*
     readgbClockLine = PINC & 0x01; //Read gameboy's clock line
     if(readgbClockLine) {                          //If Gb's Clock is On
@@ -374,6 +377,11 @@ void triggerShit() {
         if (didUpdate(currentTrigger, !triggerStates[currentTrigger])) stateChanged = true;
         msLastTestClockTick = msCurrent;
       }
+
+    } else if (TEST_INTERRUPT_TRIGGER == currentTrigger) {
+        //Process pending trigger state and then disable
+        if (didUpdate(currentTrigger, pendingTriggerStates[currentTrigger])) stateChanged = true;
+        pendingTriggerStates[currentTrigger] = false;
       
     } else if (TICK_TRIGGER == currentTrigger) {
       static unsigned long msTickTriggerPulseBegan;
@@ -530,6 +538,10 @@ void tb_sendMidiClockSlaveFromLSDJ()
   }
   countGbClockTicks++;              //Increment the bit counter
  if(countGbClockTicks==8) countGbClockTicks=0; 
+#ifdef PRINT_LSDJ_TICK_COUNTERS
+ Serial.print("gbClockTicks: ");
+ Serial.print(countGbClockTicks);
+#endif
 }
 
 void tb_assert(bool assertion, const char * description) {
