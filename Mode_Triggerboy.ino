@@ -59,9 +59,12 @@ const float fftaMidBandThreshold = 4; //IFIXME aven't tested this one yet
 const float fftaHighBandThreshold = 0.10; 
 
 // --------------------  Pin config -------------------- //
-const byte AUDIO_IN_LEFT_PIN = 3; //Read left channel audio from Analog In Pin 3.
+const byte NUM_AUDIO_IN_PINS = 3;
+byte AUDIO_IN_PINS[NUM_AUDIO_IN_PINS]; //Audio channel mappings from Analog In Pins
+
 const byte GB_CLOCK_LINE_PIN = 2; //Digital pin for GB clock line external interrupt
 byte GB_CLOCK_LINE_INTERRUPT_NUMBER = 0xF00L; //Which interrupt the GB clock line is on. Initialize to invalid # so we know if it was set properly in configurePinouts()
+
 const byte MAX_PIN_OUT = 13; //Largest output pin #
 
 //Some magic numbers for invalid pins, these should never get assigned as real outputs
@@ -131,6 +134,11 @@ void modeTriggerboySetup()
   Serial.print("There are currently ");
   Serial.print(NUM_TRIGGERS - 1);
   Serial.println(" active triggers:");
+
+  //Audio channels from Analog In Pins
+  AUDIO_IN_PINS[0] = 0;
+  AUDIO_IN_PINS[1] = 3;
+  AUDIO_IN_PINS[2] = 4;
   
   //Validate & configure all mapped pins
   configurePinouts();
@@ -251,18 +259,19 @@ void modeTriggerboy()
   }
 }
 
-void fft_forward() {
+void fft_forward(byte audioChannel) {
   //Process the FFT for this loop
-  int static i = 0;
-  static long tt;
+  static int iterators[NUM_AUDIO_IN_PINS];
+  static long tt[NUM_AUDIO_IN_PINS];
   int val;
   
-  if (millis() > tt) {
-    if (i < DATA_SIZE) {
-      val = analogRead(AUDIO_IN_LEFT_PIN);
-      data[i] = val / 4 - DATA_SIZE;
-      im[i] = 0;
-      i++;  
+  int *i = &iterators[audioChannel];
+  if (millis() > tt[audioChannel]) {
+    if (*i < DATA_SIZE) {
+      val = analogRead(AUDIO_IN_PINS[audioChannel]);
+      data[*i] = val / 4 - DATA_SIZE;
+      im[*i] = 0;
+      (*i)++;  
       
     } else {
       //this could be done with the fix_fftr function without the im array.
@@ -271,19 +280,19 @@ void fft_forward() {
       // I am only interessted in the absolute value of the transformation
       int lowBandSum = 0, midBandSum = 0, highBandSum = 0;
       int lowBandAvgDenominator = 0, midBandAvgDenominator = 0, highBandAvgDenominator = 0;
-      for (i=0; i< 64;i++) {
-         data[i] = sqrt(data[i] * data[i] + im[i] * im[i]);
-         if (i >= 2 && i <= 10) {
+      for ((*i)=0; (*i)< 64;(*i)++) {
+         data[(*i)] = sqrt(data[(*i)] * data[(*i)] + im[(*i)] * im[(*i)]);
+         if ((*i) >= 2 && (*i) <= 10) {
            //Considering this the "low band" for now. Too much noise in buckets 0 & 1 to include them.
-           lowBandSum += data[i];
+           lowBandSum += data[(*i)];
            lowBandAvgDenominator++;
-         } else if (i > 10 && i <= 20) {
+         } else if ((*i) > 10 && (*i) <= 20) {
            //"mid band"
-           midBandSum += data[i];
+           midBandSum += data[(*i)];
            midBandAvgDenominator++;
-         } else if (i > 20) {
+         } else if ((*i) > 20) {
            //"high band"
-           highBandSum += data[i];
+           highBandSum += data[(*i)];
            highBandAvgDenominator++;
          }
       }
@@ -318,14 +327,14 @@ void fft_forward() {
 #endif
     }
     
-    tt = millis();
+    tt[audioChannel] = millis();
   }
 }
 
 #ifdef PRINT_FFT
 void print_fft(char * data) {
   //Print FFT to serial for debugging
-  //for (int i = 0; i < sizeof(data) / sizeof(char); i++) {
+  //for (int (*i) = 0; (*i) < sizeof(data) / sizeof(char); (*i)++) {
   for (int i = 0; i < 64; i++) {
     Serial.print(data[i], DEC);
     Serial.print(" ");
@@ -341,7 +350,7 @@ void alwaysRunActions() {
   if (!(LOW_BAND_TRIGGER == NULL_TRIGGER
       && MID_BAND_TRIGGER == NULL_TRIGGER
       && HIGH_BAND_TRIGGER == NULL_TRIGGER)) {
-    fft_forward();         //run the FFT
+    fft_forward(AUDIO_IN_PINS[0]);         //run the FFT
   }
 
   triggerShit();
@@ -401,7 +410,7 @@ void triggerShit() {
       static unsigned long msLastReadTime;
       if (millis() > msLastReadTime) {
         //Sample every millisecond
-        int amp = analogRead(AUDIO_IN_LEFT_PIN);
+        int amp = analogRead(AUDIO_IN_PINS[0]);
         if (amp > vAmplitudeThreshold) {
   #ifdef PRINT_AMPLITUDE_THRESH
           logTimestamp();
