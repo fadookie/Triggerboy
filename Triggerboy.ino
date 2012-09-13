@@ -215,6 +215,7 @@ volatile int countSyncLightTime=0;
 volatile int countSyncSteps = 0;
 volatile int countSyncPulse = 0;
 volatile int countGbClockTicks =0;
+volatile static byte lsdjTickCounter; //How many actual LSDJ ticks have accumulated since the last beat
 int countClockPause =0;
 int countIncommingMidiByte =0;
 int countStatusLedOn =0;

@@ -476,6 +476,7 @@ boolean tb_checkLSDJStopped()
     if(sequencerStarted) {
       readgbClockLine=false;
       countClockPause = 0;                           //reset our clock
+      lsdjTickCounter = 0; //Reset LSDJ tick count
       if (usbMode) {
         //Serial.println("LSDJ stopped");
       } else {
@@ -503,7 +504,6 @@ void tb_sendMidiClockSlaveFromLSDJ()
       sequencerStart();             //call the global sequencer start function
     }
 
-    volatile static byte lsdjTickCounter; //How many ticks have accumulated since the last beat
 
     if (lsdjTickCounter == 0) {
       //There have been enough ticks to make a beat
