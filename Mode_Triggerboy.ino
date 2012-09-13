@@ -82,10 +82,6 @@ const byte INVALID_PIN_MAGIC_USED_PINS = 254;
 //Print low band FFT average:
 //#define PRINT_FFT_BAND_AVGS
 
-//Print LSDJ tick/step/beat counters
-//#define PRINT_LSDJ_TICK_COUNTERS
-
-
 // --------------------  Data Structures, etc. -------------------- //
 
 //Trigger data structures
@@ -122,7 +118,7 @@ void modeTriggerboySetup()
   triggerMap[TICK_TOGGLE_TRIGGER] = 6; //Toggle on/off in time with LSDJ Master Clock.
   triggerMap[AMPLITUDE_TRIGGER]   = 6; //Trigger when audio amplitude is over a certain threshhold
   triggerMap[TEST_CLOCK_TRIGGER]  = 13; //Trigger on an internal timer, for testing outputs independently of the connected inputs
-  triggerMap[TEST_INTERRUPT_TRIGGER] = 13; //Trigger on an interrupt handler
+  triggerMap[TEST_INTERRUPT_TRIGGER] = 13; //For triggering when an interrupt handler is invoked, currently assigned to handleGbClockLineByte
   triggerMap[LOW_BAND_TRIGGER]    = 6; //Low-band FFT threshold trigger
   triggerMap[MID_BAND_TRIGGER]    = 6; //Mid-band FFT threshold trigger
   triggerMap[HIGH_BAND_TRIGGER]   = 4; //High-band FFT threshold trigger
@@ -219,7 +215,6 @@ void modeTriggerboyCleanup() {
  * Interrupt handler for when GB_CLOCK_LINE_PIN turns on
  */
 void handleGbClockLineByte() {
-    pendingTriggerStates[TEST_INTERRUPT_TRIGGER] = true;
   /*
     readgbClockLine = PINC & 0x01; //Read gameboy's clock line
     if(readgbClockLine) {                          //If Gb's Clock is On
@@ -243,7 +238,6 @@ void modeTriggerboy()
     }
     */
       
-    countClockPause= 0;                          //Reset our wait timer for detecting a sequencer stop
     
     //readGbSerialIn = readGbSerialIn << 1;        //left shift the serial byte by one to append new bit from last loop
     //readGbSerialIn = readGbSerialIn + bit;       //and then add the bit that was read
@@ -482,7 +476,11 @@ boolean tb_checkLSDJStopped()
     if(sequencerStarted) {
       readgbClockLine=false;
       countClockPause = 0;                           //reset our clock
-      if (!usbMode) Serial.write(0xFC);                      //send the transport stop message
+      if (usbMode) {
+        //Serial.println("LSDJ stopped");
+      } else {
+        Serial.write(0xFC);                      //send the transport stop message
+      }
       sequencerStop();                               //call the global sequencer stop function
     }
     return true;
@@ -507,25 +505,10 @@ void tb_sendMidiClockSlaveFromLSDJ()
 
     volatile static byte lsdjTickCounter; //How many ticks have accumulated since the last beat
 
-#ifdef PRINT_LSDJ_TICK_COUNTERS
-    logTimestamp();
-    Serial.print(lsdjTickCounter);
-#endif
-
     if (lsdjTickCounter == 0) {
       //There have been enough ticks to make a beat
-
-#ifdef PRINT_LSDJ_TICK_COUNTERS
-      Serial.print(" -> BEAT! (At ");
-      Serial.print(lsdjTicksPerBeat);
-      Serial.println(" ppq)");
-#endif
       pendingTriggerStates[TICK_TRIGGER] = true;
       pendingTriggerStates[TICK_TOGGLE_TRIGGER] = true;
-    } else {
-#ifdef PRINT_LSDJ_TICK_COUNTERS
-      Serial.println("");
-#endif
     }
 
     lsdjTickCounter++;
@@ -537,11 +520,9 @@ void tb_sendMidiClockSlaveFromLSDJ()
     //updateVisualSync();
   }
   countGbClockTicks++;              //Increment the bit counter
- if(countGbClockTicks==8) countGbClockTicks=0; 
-#ifdef PRINT_LSDJ_TICK_COUNTERS
- Serial.print("gbClockTicks: ");
- Serial.print(countGbClockTicks);
-#endif
+  if(countGbClockTicks==8) countGbClockTicks=0; 
+
+  countClockPause= 0;                          //Reset our wait timer for detecting a sequencer stop
 }
 
 void tb_assert(bool assertion, const char * description) {
