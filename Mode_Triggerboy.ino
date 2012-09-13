@@ -31,11 +31,11 @@ const byte NULL_TRIGGER = 0; //DO NOT CHANGE!!! Triggers that are currently disa
 //The in-use triggers should be continuous numbers from 1 through (NUM_TRIGGERS - 1.)
 //Extras may be assigned to NULL_TRIGGER to disable them.
 const byte TICK_TRIGGER = 1;
-const byte TICK_TOGGLE_TRIGGER = 2;
+const byte TICK_TOGGLE_TRIGGER = NULL_TRIGGER;
 const byte AMPLITUDE_TRIGGER = NULL_TRIGGER;
-const byte TEST_CLOCK_TRIGGER = NULL_TRIGGER;
-const byte TEST_INTERRUPT_TRIGGER = 3;
-const byte LOW_BAND_TRIGGER = NULL_TRIGGER;
+const byte TEST_CLOCK_TRIGGER = 3;
+const byte TEST_INTERRUPT_TRIGGER = NULL_TRIGGER;
+const byte LOW_BAND_TRIGGER = 2;
 const byte MID_BAND_TRIGGER = NULL_TRIGGER;
 const byte HIGH_BAND_TRIGGER = NULL_TRIGGER;
 
@@ -60,7 +60,7 @@ const float fftaHighBandThreshold = 3.5;
 // --------------------  Pin config -------------------- //
 const byte AUDIO_IN_LEFT_PIN = 3; //Read left channel audio from Analog In Pin 3.
 const byte GB_CLOCK_LINE_PIN = 2; //Digital pin for GB clock line external interrupt
-byte GB_CLOCK_LINE_INTERRUPT_NUMBER = 3; //Which interrupt the GB clock line is on. Initialize to invalid # so we know if it was set properly in configurePinouts()
+byte GB_CLOCK_LINE_INTERRUPT_NUMBER = 0xF00L; //Which interrupt the GB clock line is on. Initialize to invalid # so we know if it was set properly in configurePinouts()
 const byte MAX_PIN_OUT = 13; //Largest output pin #
 
 //Some magic numbers for invalid pins, these should never get assigned as real outputs
