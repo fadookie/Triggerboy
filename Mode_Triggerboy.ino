@@ -30,12 +30,13 @@ const byte NULL_TRIGGER = 0; //DO NOT CHANGE!!! Triggers that are currently disa
 
 //The in-use triggers should be continuous numbers from 1 through (NUM_TRIGGERS - 1.)
 //Extras may be assigned to NULL_TRIGGER to disable them.
-const byte TICK_TRIGGER = 1;
+const byte TICK_TRIGGER = NULL_TRIGGER;
 const byte TICK_TOGGLE_TRIGGER = NULL_TRIGGER;
-const byte AMPLITUDE_TRIGGER = NULL_TRIGGER;
+const byte AMPLITUDE_TRIGGER = 1;
+const byte AMPLITUDE_TOGGLE_TRIGGER = 2;
 const byte TEST_CLOCK_TRIGGER = 3;
 const byte TEST_INTERRUPT_TRIGGER = NULL_TRIGGER;
-const byte LOW_BAND_TRIGGER = 2;
+const byte LOW_BAND_TRIGGER = NULL_TRIGGER;
 const byte MID_BAND_TRIGGER = NULL_TRIGGER;
 const byte HIGH_BAND_TRIGGER = NULL_TRIGGER;
 
@@ -46,7 +47,7 @@ const byte tickTriggerStepsPerBeat = 4;
 const unsigned long msTickTriggerPulseDuration = 2;
 
 //AMPLITUDE_TRIGGER
-const int vAmplitudeThreshold = 700; //Voltage threshold for this trigger to turn on, this will be a value from analogRead() from 0 to 1023
+const int vAmplitudeThreshold = 514; //Voltage threshold for this trigger to turn on, this will be a value from analogRead() from 0 to 1023
 
 //TEST_CLOCK_TRIGGER
 const unsigned long msTestClockTickInterval = 1000; //How long to wait between test clock ticks (in milliseconds)
@@ -77,7 +78,7 @@ const byte INVALID_PIN_MAGIC_USED_PINS = 254;
 //#define PRINT_TRIGGERS
 
 //Print amplitude whenever the sample exceeds the threshold:
-//#define PRINT_AMPLITUDE_THRESH
+#define PRINT_AMPLITUDE_THRESH
 
 //Print low band FFT average:
 //#define PRINT_FFT_BAND_AVGS
@@ -117,6 +118,7 @@ void modeTriggerboySetup()
   triggerMap[TICK_TRIGGER]        = 4; //Pulse in time with LSDJ Master Clock.
   triggerMap[TICK_TOGGLE_TRIGGER] = 6; //Toggle on/off in time with LSDJ Master Clock.
   triggerMap[AMPLITUDE_TRIGGER]   = 6; //Trigger when audio amplitude is over a certain threshhold
+  triggerMap[AMPLITUDE_TOGGLE_TRIGGER]   = 4; //Trigger when audio amplitude is over a certain threshhold
   triggerMap[TEST_CLOCK_TRIGGER]  = 13; //Trigger on an internal timer, for testing outputs independently of the connected inputs
   triggerMap[TEST_INTERRUPT_TRIGGER] = 13; //For triggering when an interrupt handler is invoked, currently assigned to handleGbClockLineByte
   triggerMap[LOW_BAND_TRIGGER]    = 6; //Low-band FFT threshold trigger
@@ -409,6 +411,23 @@ void triggerShit() {
           if (didUpdate(currentTrigger, true)) stateChanged = true;
         } else {
           if (didUpdate(currentTrigger, false)) stateChanged = true;
+        }
+        msLastReadTime = millis();
+      }
+    
+    } else if (AMPLITUDE_TOGGLE_TRIGGER == currentTrigger) {
+      static unsigned long msLastReadTime;
+      static bool toggleNext = true;
+      if (millis() > msLastReadTime) {
+        //Sample every millisecond
+        int amp = analogRead(AUDIO_IN_LEFT_PIN);
+        if (amp > vAmplitudeThreshold) {
+          if (toggleNext) {
+            if (didUpdate(currentTrigger, !triggerStates[currentTrigger])) stateChanged = true;
+            toggleNext = false;
+          }
+        } else { 
+          toggleNext = true;
         }
         msLastReadTime = millis();
       }
