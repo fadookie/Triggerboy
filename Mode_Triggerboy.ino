@@ -32,13 +32,13 @@ const byte NULL_TRIGGER = 0; //DO NOT CHANGE!!! Triggers that are currently disa
 //Extras may be assigned to NULL_TRIGGER to disable them.
 const byte TICK_TRIGGER = NULL_TRIGGER;
 const byte TICK_TOGGLE_TRIGGER = NULL_TRIGGER;
-const byte AMPLITUDE_TRIGGER = 1;
-const byte AMPLITUDE_TOGGLE_TRIGGER = 2;
+const byte AMPLITUDE_TRIGGER = NULL_TRIGGER;
+const byte AMPLITUDE_TOGGLE_TRIGGER = NULL_TRIGGER;
 const byte TEST_CLOCK_TRIGGER = 3;
 const byte TEST_INTERRUPT_TRIGGER = NULL_TRIGGER;
-const byte LOW_BAND_TRIGGER = NULL_TRIGGER;
+const byte LOW_BAND_TRIGGER = 1;
 const byte MID_BAND_TRIGGER = NULL_TRIGGER;
-const byte HIGH_BAND_TRIGGER = NULL_TRIGGER;
+const byte HIGH_BAND_TRIGGER = 2;
 
 //Config for each trigger:
 //TICK_TRIGGER, TICK_TOGGLE_TRIGGER
@@ -54,9 +54,9 @@ const unsigned long msTestClockTickInterval = 1000; //How long to wait between t
 
 //LOW_BAND_TRIGGER, MID_BAND_TRIGGER, HIGH_BAND_TRIGGER
 //FFT amplitude thresholds for trigger to turn on
-const byte fftaLowBandThreshold = 5; //Change this to a float and update the average calculation in fft_forward if decimal precision is needed
-const byte fftaMidBandThreshold = 4; //IFIXME aven't tested this one yet
-const float fftaHighBandThreshold = 3.5; 
+const float fftaLowBandThreshold = 0.50; //Change this to a float and update the average calculation in fft_forward if decimal precision is needed
+const float fftaMidBandThreshold = 4; //IFIXME aven't tested this one yet
+const float fftaHighBandThreshold = 0.10; 
 
 // --------------------  Pin config -------------------- //
 const byte AUDIO_IN_LEFT_PIN = 3; //Read left channel audio from Analog In Pin 3.
@@ -78,7 +78,7 @@ const byte INVALID_PIN_MAGIC_USED_PINS = 254;
 //#define PRINT_TRIGGERS
 
 //Print amplitude whenever the sample exceeds the threshold:
-#define PRINT_AMPLITUDE_THRESH
+//#define PRINT_AMPLITUDE_THRESH
 
 //Print low band FFT average:
 //#define PRINT_FFT_BAND_AVGS
@@ -291,10 +291,10 @@ void fft_forward() {
       /*FIXME I really want to be able to use fractional numbers here for better granularity on the threshold
       and avoid remainder chopping, but there's probably a workaround to use integer math here and retain precision using
       the modulus or something like that. */
-      int lowBandAvg = lowBandSum / lowBandAvgDenominator; //But we don't need float precision on these bands, not yet anyway
-      int midBandAvg = midBandSum / midBandAvgDenominator;
-      //float lowBandAvg = (float)lowBandSum / (float)lowBandAvgDenominator;
-      //float midBandAvg = (float)midBandSum / (float)midBandAvgDenominator;
+      //int lowBandAvg = lowBandSum / lowBandAvgDenominator; //But we don't need float precision on these bands, not yet anyway
+      //int midBandAvg = midBandSum / midBandAvgDenominator;
+      float lowBandAvg = (float)lowBandSum / (float)lowBandAvgDenominator;
+      float midBandAvg = (float)midBandSum / (float)midBandAvgDenominator;
       float highBandAvg = (float)highBandSum / (float)highBandAvgDenominator;
       
       //If this band is above our threshold, trigger on, otherwise trigger off
