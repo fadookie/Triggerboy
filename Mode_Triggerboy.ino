@@ -84,7 +84,7 @@ const byte INVALID_PIN_MAGIC_USED_PINS = 254;
 //#define PRINT_AMPLITUDE_THRESH
 
 //Print low band FFT average:
-//#define PRINT_FFT_BAND_AVGS
+#define PRINT_FFT_BAND_AVGS
 
 // --------------------  Data Structures, etc. -------------------- //
 
@@ -137,8 +137,8 @@ void modeTriggerboySetup()
 
   //Audio channels from Analog In Pins
   AUDIO_IN_PINS[0] = 3;
-  AUDIO_IN_PINS[1] = 0;
-  AUDIO_IN_PINS[2] = 4;
+  AUDIO_IN_PINS[1] = 4;
+  AUDIO_IN_PINS[2] = 0;
   
   //Validate & configure all mapped pins
   configurePinouts();
@@ -267,10 +267,10 @@ void fft_forward(byte audioChannel) {
   
   int *i = &iterators[audioChannel];
   if (millis() > tt[audioChannel]) {
-    if (*i < DATA_SIZE) {
+    if ((*i) < DATA_SIZE) {
       val = analogRead(AUDIO_IN_PINS[audioChannel]);
-      data[*i] = val / 4 - DATA_SIZE;
-      im[*i] = 0;
+      data[(*i)] = val / 4 - DATA_SIZE;
+      im[(*i)] = 0;
       (*i)++;  
       
     } else {
@@ -312,13 +312,19 @@ void fft_forward(byte audioChannel) {
       pendingTriggerStates[HIGH_BAND_TRIGGER] = (highBandAvg > fftaHighBandThreshold);
       
 #ifdef PRINT_FFT_BAND_AVGS
-      logTimestamp();
-      Serial.print("FFT Band Averages: ");
+      if (audioChannel == 0) {
+        logTimestamp();
+        Serial.print("FFT Band Averages ");
+      }
+      Serial.print("[ch");
+      Serial.print(audioChannel);
+      Serial.print("] : ");
       Serial.print(lowBandAvg);
       Serial.print(" ");
       Serial.print(midBandAvg);
       Serial.print(" ");
-      Serial.println(highBandAvg);
+      Serial.print(highBandAvg);
+      (audioChannel == 1) ?  Serial.println(" ") : Serial.print(" ");
 #endif
       
       //do something with the data values 1..64 and ignore im
@@ -350,7 +356,8 @@ void alwaysRunActions() {
   if (!(LOW_BAND_TRIGGER == NULL_TRIGGER
       && MID_BAND_TRIGGER == NULL_TRIGGER
       && HIGH_BAND_TRIGGER == NULL_TRIGGER)) {
-    fft_forward(AUDIO_IN_PINS[0]);         //run the FFT
+    fft_forward(0);         //run the FFT
+    fft_forward(1);         //run the FFT
   }
 
   triggerShit();
