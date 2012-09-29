@@ -136,8 +136,8 @@ void modeTriggerboySetup()
   Serial.println(" active triggers:");
 
   //Audio channels from Analog In Pins
-  AUDIO_IN_PINS[0] = 0;
-  AUDIO_IN_PINS[1] = 3;
+  AUDIO_IN_PINS[0] = 3;
+  AUDIO_IN_PINS[1] = 0;
   AUDIO_IN_PINS[2] = 4;
   
   //Validate & configure all mapped pins
@@ -429,7 +429,7 @@ void triggerShit() {
       static bool toggleNext = true;
       if (millis() > msLastReadTime) {
         //Sample every millisecond
-        int amp = analogRead(AUDIO_IN_LEFT_PIN);
+        int amp = analogRead(AUDIO_IN_PINS[0]);
         if (amp > vAmplitudeThreshold) {
           if (toggleNext) {
             if (didUpdate(currentTrigger, !triggerStates[currentTrigger])) stateChanged = true;
