@@ -27,6 +27,8 @@ I'm currently planning or developing the following triggers:
  *  **MIDI out triggers** - I may take advantage of the MIDI out functionality in Arduinoboy via a special build of LSDJ that sends MIDI notes from the Game Boy to the Arduino, as this would provide really tight sync with the music. Unfortunately, the current implementation requires a special command on each instrument in order to actually send the notes.
 
 ## Hardware
+[Schematics may be found on the wiki](https://github.com/fadookie/Triggerboy/wiki/Hardware).
+
 The circuit layout for Triggerboy is based on [the Arduinoboy schematic](http://trash80.com/arduinoboy/arduinoboy_schematic_1_1_0.png), with several changes:
 
  * The Game Boy clock line has been moved from A0 to D2. The rest of the Game Boy data lines are currently unused and do not need to be connected, but you do still need to ground the cable.
